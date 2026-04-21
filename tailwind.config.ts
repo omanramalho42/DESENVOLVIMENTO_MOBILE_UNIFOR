@@ -8,6 +8,7 @@ module.exports = {
     "./*.{html,js,jsx,ts,tsx,mdx}",
     "./src/**/*.{html,js,jsx,ts,tsx,mdx}",
   ],
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   presets: [require("nativewind/preset")],
   important: "html",
   safelist: [
