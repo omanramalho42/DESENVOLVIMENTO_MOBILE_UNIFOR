@@ -1,14 +1,12 @@
+import {
+  getAuthAlertData,
+  loginWithEmail,
+  loginWithGoogle,
+  resetPassword,
+} from "@/services/_auth";
 import { Ionicons } from "@expo/vector-icons";
-import { settings } from "@/settings";
-import { auth } from "@/services/_firebase";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import {
-  GoogleAuthProvider,
-  sendPasswordResetEmail,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -23,58 +21,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { z } from "zod";
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Informe o e-mail.")
-    .email("Informe um e-mail valido."),
-  senha: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
-});
-
-const resetPasswordSchema = z
-  .string()
-  .trim()
-  .min(1, "Informe o e-mail para recuperar a senha.")
-  .email("Informe um e-mail valido.");
-
-const getAuthErrorMessage = (error: unknown) => {
-  const code =
-    typeof error === "object" && error && "code" in error
-      ? String((error as { code?: unknown }).code)
-      : "";
-
-  switch (code) {
-    case "auth/invalid-credential":
-    case "auth/user-not-found":
-    case "auth/wrong-password":
-      return "E-mail ou senha incorretos.";
-    case "auth/invalid-email":
-      return "Informe um e-mail valido.";
-    case "auth/too-many-requests":
-      return "Muitas tentativas. Tente novamente mais tarde.";
-    case "auth/network-request-failed":
-      return "Falha de conexao. Verifique sua internet.";
-    case "auth/configuration-not-found":
-      return "Ative o Firebase Authentication e o provedor Google no console do Firebase.";
-    case "auth/operation-not-allowed":
-      return "Este metodo de login ainda nao esta ativado no Firebase Authentication.";
-    case "auth/popup-blocked":
-      return "O navegador bloqueou a janela do Google. Permita pop-ups para continuar.";
-    case "auth/popup-closed-by-user":
-    case "auth/cancelled-popup-request":
-      return "Login com Google cancelado.";
-    case "auth/unauthorized-domain":
-      return "Adicione este dominio aos dominios autorizados do Firebase Authentication.";
-    case "auth/invalid-api-key":
-    case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
-      return "As configuracoes do Firebase nao estao validas.";
-    default:
-      return "Nao foi possivel entrar. Tente novamente.";
-  }
-};
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -83,67 +29,29 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    const parsed = loginSchema.safeParse({ email, senha });
-
-    if (!parsed.success) {
-      Alert.alert(
-        "Dados invalidos",
-        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
-      );
-      return;
-    }
-
-    if (!settings.hasFirebaseSettings || !auth) {
-      Alert.alert(
-        "Firebase nao configurado",
-        "Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login.",
-      );
-      return;
-    }
-
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(
-        auth,
-        parsed.data.email,
-        parsed.data.senha,
-      );
+      await loginWithEmail(email, senha);
       router.replace("/(tabs)/home");
     } catch (error) {
-      Alert.alert("Erro no login", getAuthErrorMessage(error));
+      const { title, message } = getAuthAlertData(error, "Erro no login");
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
   };
 
   const handlePasswordReset = async () => {
-    const parsedEmail = resetPasswordSchema.safeParse(email);
-
-    if (!parsedEmail.success) {
-      Alert.alert(
-        "Dados invalidos",
-        parsedEmail.error.issues[0]?.message ?? "Informe o e-mail.",
-      );
-      return;
-    }
-
-    if (!settings.hasFirebaseSettings || !auth) {
-      Alert.alert(
-        "Firebase nao configurado",
-        "Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para recuperar a senha.",
-      );
-      return;
-    }
-
     try {
       setLoading(true);
-      await sendPasswordResetEmail(auth, parsedEmail.data);
+      await resetPassword(email);
       Alert.alert(
         "E-mail enviado",
         "Enviamos as instrucoes de recuperacao para o e-mail informado.",
       );
     } catch (error) {
-      Alert.alert("Erro", getAuthErrorMessage(error));
+      const { title, message } = getAuthAlertData(error, "Erro");
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -157,31 +65,13 @@ export default function Login() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!settings.hasFirebaseSettings || !auth) {
-      Alert.alert(
-        "Firebase nao configurado",
-        "Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login com Google.",
-      );
-      return;
-    }
-
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Google no mobile",
-        "No Android/iOS, o Google exige configuracao com expo-auth-session e IDs de cliente por plataforma.",
-      );
-      return;
-    }
-
     try {
       setLoading(true);
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-
-      await signInWithPopup(auth, provider);
+      await loginWithGoogle();
       router.replace("/(tabs)/home");
     } catch (error) {
-      Alert.alert("Erro no Google", getAuthErrorMessage(error));
+      const { title, message } = getAuthAlertData(error, "Erro no Google");
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
