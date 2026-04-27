@@ -1,3 +1,4 @@
+import { SocialLoginButton } from "@/components";
 import {
   getAuthAlertData,
   loginWithEmail,
@@ -24,14 +25,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
   const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
+  const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
       setLoading(true);
-      await loginWithEmail(email, senha);
+      await loginWithEmail(email, password);
       router.replace("/(tabs)/home");
     } catch (error) {
       const { title, message } = getAuthAlertData(error, "Erro no login");
@@ -88,10 +89,6 @@ export default function Login() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="px-6 pt-2 flex-1">
-            <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
-
             <View className="items-center mt-4">
               <View className="w-[180px] h-[180px] items-center justify-center -mb-2">
                 <Image
@@ -168,8 +165,8 @@ export default function Login() {
                   color="#6FC72C"
                 />
                 <TextInput
-                  value={senha}
-                  onChangeText={setSenha}
+                  value={password}
+                  onChangeText={setPassword}
                   placeholder="Digite sua senha"
                   placeholderTextColor="#71717A"
                   secureTextEntry={!show}
@@ -247,42 +244,34 @@ export default function Login() {
                 <View className="flex-1 h-[1px] bg-[#27272A]" />
               </View>
 
-              <TouchableOpacity
-                className="h-[56px] bg-transparent border border-[#27272A] rounded-2xl flex-row items-center justify-center mb-4"
+              <SocialLoginButton
+                label="Entrar com Google"
                 disabled={loading}
                 onPress={handleGoogleLogin}
-              >
-                <Image
-                  source={{
-                    uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png",
-                  }}
-                  style={{ width: 22, height: 22, marginRight: 12 }}
-                />
-                <Text
-                  className="text-white font-medium text-[16px]"
-                  style={{ fontFamily: "System" }}
-                >
-                  Entrar com Google
-                </Text>
-              </TouchableOpacity>
+                className="mb-4"
+                icon={
+                  <Image
+                    source={{
+                      uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png",
+                    }}
+                    style={{ width: 22, height: 22 }}
+                  />
+                }
+              />
 
-              <TouchableOpacity
-                className="h-[56px] bg-transparent border border-[#27272A] rounded-2xl flex-row items-center justify-center mb-8"
+              <SocialLoginButton
+                label="Entrar com Apple"
                 onPress={() => showUnavailableSocialLogin("Apple")}
-              >
-                <Ionicons
-                  name="logo-apple"
-                  size={24}
-                  color="white"
-                  style={{ marginRight: 10, marginTop: -2 }}
-                />
-                <Text
-                  className="text-white font-medium text-[16px]"
-                  style={{ fontFamily: "System" }}
-                >
-                  Entrar com Apple
-                </Text>
-              </TouchableOpacity>
+                className="mb-8"
+                icon={
+                  <Ionicons
+                    name="logo-apple"
+                    size={24}
+                    color="white"
+                    style={{ marginTop: -2 }}
+                  />
+                }
+              />
             </View>
 
             <View className="flex-row justify-center mt-auto mb-6">
@@ -294,9 +283,7 @@ export default function Login() {
               </Text>
               <TouchableOpacity
                 hitSlop={10}
-                onPress={() =>
-                  Alert.alert("Cadastro", "A tela de cadastro ainda nao foi criada.")
-                }
+                onPress={() => router.push("./sigunp")}
               >
                 <Text
                   className="text-[#6FC72C] text-[15px] font-semibold"

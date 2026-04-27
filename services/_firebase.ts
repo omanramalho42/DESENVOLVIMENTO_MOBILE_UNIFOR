@@ -42,4 +42,12 @@ if (settings.hasFirebaseSettings) {
   }
 }
 
-export { app, auth, db };
+const getRequiredAuth = () => {
+  if (!settings.hasFirebaseSettings || !auth) {
+    throw new Error("Firebase auth is not configured.");
+  }
+
+  return auth;
+};
+
+export { app, auth, db, getRequiredAuth };

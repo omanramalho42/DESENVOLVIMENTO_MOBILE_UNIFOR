@@ -1,10 +1,11 @@
-import { auth } from "@/services/_firebase";
-import { settings } from "@/settings";
+import { getRequiredAuth } from "@/services/_firebase";
 import {
-    GoogleAuthProvider,
-    sendPasswordResetEmail,
-    signInWithEmailAndPassword,
-    signInWithPopup,
+	createUserWithEmailAndPassword,
+	GoogleAuthProvider,
+	sendPasswordResetEmail,
+	signInWithEmailAndPassword,
+	signInWithPopup,
+	updateProfile
 } from "firebase/auth";
 import { Platform } from "react-native";
 import { z } from "zod";
@@ -81,6 +82,14 @@ export const getAuthAlertData = (error: unknown, fallbackTitle: string) => {
 	};
 };
 
+const requireConfiguredAuth = (message: string) => {
+	try {
+		return getRequiredAuth();
+	} catch {
+		throw new AuthServiceError("Firebase nao configurado", message);
+	}
+};
+
 export const loginWithEmail = async (email: string, senha: string) => {
 	const parsed = loginSchema.safeParse({ email, senha });
 
@@ -91,12 +100,9 @@ export const loginWithEmail = async (email: string, senha: string) => {
 		);
 	}
 
-	if (!settings.hasFirebaseSettings || !auth) {
-		throw new AuthServiceError(
-			"Firebase nao configurado",
-			"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login.",
-		);
-	}
+	const auth = requireConfiguredAuth(
+		"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login.",
+	);
 
 	try {
 		await signInWithEmailAndPassword(auth, parsed.data.email, parsed.data.senha);
@@ -115,12 +121,9 @@ export const resetPassword = async (email: string) => {
 		);
 	}
 
-	if (!settings.hasFirebaseSettings || !auth) {
-		throw new AuthServiceError(
-			"Firebase nao configurado",
-			"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para recuperar a senha.",
-		);
-	}
+	const auth = requireConfiguredAuth(
+		"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para recuperar a senha.",
+	);
 
 	try {
 		await sendPasswordResetEmail(auth, parsedEmail.data);
@@ -130,12 +133,9 @@ export const resetPassword = async (email: string) => {
 };
 
 export const loginWithGoogle = async () => {
-	if (!settings.hasFirebaseSettings || !auth) {
-		throw new AuthServiceError(
-			"Firebase nao configurado",
-			"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login com Google.",
-		);
-	}
+	const auth = requireConfiguredAuth(
+		"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para usar o login com Google.",
+	);
 
 	if (Platform.OS !== "web") {
 		throw new AuthServiceError(
@@ -153,3 +153,17 @@ export const loginWithGoogle = async () => {
 		throw new AuthServiceError("Erro no Google", getAuthErrorMessage(error));
 	}
 };
+
+export const signUpEmail = async (email: string, password: string, name: string) => {
+	try {
+		const auth = requireConfiguredAuth(
+			"Preencha as variaveis EXPO_PUBLIC_FB_* no arquivo .env para criar a conta.",
+		);
+		const parsed = await createUserWithEmailAndPassword(auth, email.trim(), password);
+		await updateProfile(parsed.user, { displayName: name });
+		return parsed.user;
+	} catch (error) {
+		console.error("Erro ao criar usuario:", error);
+		throw error;
+	}
+}
