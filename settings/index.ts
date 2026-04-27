@@ -16,5 +16,5 @@ const env = envSchema.parse({
 
 export const settings = {
   ...env,
-  hasFirebaseSettings: Object.values(env).every(Boolean),
+  hasFirebaseSettings: Boolean(env.FB_API_KEY && env.FB_AUTH_DOMAIN && env.FB_PROJECT_ID && env.FB_STORAGE_BUCKET),
 };
