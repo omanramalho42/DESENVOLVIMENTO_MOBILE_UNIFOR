@@ -68,7 +68,7 @@ export default function SignUp() {
             <View className="items-center">
               <View className="h-[180px] w-[180px] items-center justify-center">
                 <Image
-                  source={require("../../assets/images/Alimenta-logo.png")}
+                  source={require("../../../assets/images/Alimenta-logo.png")}
                   style={{ width: 180, height: 180 }}
                   resizeMode="contain"
                 />

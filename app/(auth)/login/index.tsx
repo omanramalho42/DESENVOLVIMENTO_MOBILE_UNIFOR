@@ -92,7 +92,7 @@ export default function Login() {
             <View className="items-center mt-4">
               <View className="w-[180px] h-[180px] items-center justify-center -mb-2">
                 <Image
-                  source={require("../../assets/images/Alimenta-logo.png")}
+                  source={require("../../../assets/images/Alimenta-logo.png")}
                   style={{ width: 180, height: 180 }}
                   resizeMode="contain"
                 />
@@ -283,7 +283,7 @@ export default function Login() {
               </Text>
               <TouchableOpacity
                 hitSlop={10}
-                onPress={() => router.push("./sigunp")}
+                onPress={() => router.push("../signup")}
               >
                 <Text
                   className="text-[#6FC72C] text-[15px] font-semibold"
