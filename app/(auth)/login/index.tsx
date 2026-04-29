@@ -1,4 +1,5 @@
 import { SocialLoginButton } from "@/components";
+import ForgotPasswordDialog from "@/components/forgot-password-dialog";
 import {
   getAuthAlertData,
   loginWithEmail,
@@ -24,6 +25,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
+  const [openForgotPass, setOpenForgotPass] = useState<boolean>(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -186,20 +189,29 @@ export default function Login() {
                   />
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                className="self-end mt-4 mb-2"
-                disabled={loading}
-                hitSlop={10}
-                onPress={handlePasswordReset}
-              >
-                <Text
-                  className="text-[#6FC72C] text-[14px] font-medium"
-                  style={{ fontFamily: "System" }}
-                >
-                  Esqueceu a senha?
-                </Text>
-              </TouchableOpacity>
+              <ForgotPasswordDialog
+                open={openForgotPass}
+                setOpen={setOpenForgotPass}
+                onSuccessCallback={handlePasswordReset}
+                trigger={
+                  <TouchableOpacity
+                    className="self-end mt-4 mb-2"
+                    disabled={loading}
+                    hitSlop={10}
+                    onPress={(event) => {
+                      event.preventDefault();
+                      setOpenForgotPass(true);
+                    }}
+                  >
+                    <Text
+                      className="text-[#6FC72C] text-[14px] font-medium"
+                      style={{ fontFamily: "System" }}
+                    >
+                      Esqueceu a senha?
+                    </Text>
+                  </TouchableOpacity>
+                }
+              />
 
               <TouchableOpacity
                 className="mt-4"
