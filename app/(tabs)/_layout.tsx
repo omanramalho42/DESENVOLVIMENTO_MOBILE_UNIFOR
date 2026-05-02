@@ -94,6 +94,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="become-donor/index"
+        options={{
+          href: null,
+          title: "Tornar-se Doador",
+        }}
+      />
     </Tabs>
   );
 }

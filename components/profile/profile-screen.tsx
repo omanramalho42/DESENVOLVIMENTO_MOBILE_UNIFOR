@@ -3,13 +3,13 @@ import { auth, db, storage } from "@/services";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { StatusBar } from "expo-status-bar";
-import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { signOut } from "firebase/auth";
+import { StatusBar } from "expo-status-bar";
 import type { FirebaseError } from "firebase/app";
+import { signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   type StorageReference,
@@ -149,7 +149,6 @@ const ProfileScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [syncWarning, setSyncWarning] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
-  const [donorLoading, setDonorLoading] = useState(false);
   const [photoOptionsVisible, setPhotoOptionsVisible] = useState(false);
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
   const [phoneDraft, setPhoneDraft] = useState("");
@@ -407,24 +406,8 @@ const ProfileScreen = () => {
     }
   };
 
-  const becomeDonor = async () => {
-    if (!user || !db) {
-      return;
-    }
-
-    setDonorLoading(true);
-
-    try {
-      await setDoc(doc(db, "users", user.uid), { tipoUsuario: "doador" }, { merge: true });
-      setProfile((current) =>
-        current ? { ...current, tipoUsuario: "doador" } : current
-      );
-      setSuccessMessage("Agora você é doador.");
-    } catch {
-      Alert.alert("Erro", "Não foi possível atualizar seu tipo de usuário.");
-    } finally {
-      setDonorLoading(false);
-    }
+  const becomeDonor = () => {
+    router.push("/(tabs)/become-donor" as any);
   };
 
   const handleLogout = async () => {
@@ -617,21 +600,20 @@ const ProfileScreen = () => {
 
           {displayProfile.tipoUsuario === "Receptor" ? (
             <Pressable
-              onPress={becomeDonor}
-              disabled={donorLoading}
-              className="mb-6 overflow-hidden rounded-[22px]"
+            onPress={becomeDonor}
+            className="mb-6 overflow-hidden rounded-[22px]"
+          >
+            <LinearGradient
+              colors={["#7DE11B", "#58B50B"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="h-[56px] items-center justify-center rounded-[22px]"
             >
-              <LinearGradient
-                colors={["#7DE11B", "#58B50B"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="h-[56px] items-center justify-center rounded-[22px]"
-              >
-                <Text className="text-[16px] font-semibold text-[#081106]">
-                  {donorLoading ? "Atualizando..." : "Tornar-se doador"}
-                </Text>
-              </LinearGradient>
-            </Pressable>
+              <Text className="text-[16px] font-semibold text-[#081106]">
+                Tornar-se doador
+              </Text>
+            </LinearGradient>
+          </Pressable>
           ) : null}
 
           <View className="mb-6 overflow-hidden rounded-[24px] border border-[#2B4F17] bg-[#101A0F] px-4 py-4">
