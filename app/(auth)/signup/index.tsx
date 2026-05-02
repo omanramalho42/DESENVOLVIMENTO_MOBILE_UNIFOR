@@ -10,10 +10,10 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,9 +61,13 @@ export default function SignUp() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 px-6 pt-2">
-            <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}
+            >
               <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
+            </Pressable>
 
             <View className="items-center">
               <View className="h-[180px] w-[180px] items-center justify-center">
@@ -160,17 +164,20 @@ export default function SignUp() {
                   className="ml-3 mr-2 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setShowPassword((current) => !current)}
                   disabled={loading > 0}
                   hitSlop={10}
+                  style={({ pressed }) => ({
+                    opacity: pressed && loading <= 0 ? 0.72 : 1,
+                  })}
                 >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={24}
                     color="#A1A1AA"
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <Text
@@ -195,10 +202,13 @@ export default function SignUp() {
                   className="ml-3 mr-2 flex-1 text-[16px] font-normal text-white"
                   style={{ fontFamily: "System" }}
                 />
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setShowConfirmPassword((current) => !current)}
                   disabled={loading > 0}
                   hitSlop={10}
+                  style={({ pressed }) => ({
+                    opacity: pressed && loading <= 0 ? 0.72 : 1,
+                  })}
                 >
                   <Ionicons
                     name={
@@ -207,14 +217,16 @@ export default function SignUp() {
                     size={24}
                     color="#A1A1AA"
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
-              <TouchableOpacity
+              <Pressable
                 className="mt-8"
-                activeOpacity={0.85}
                 disabled={loading > 0}
                 onPress={handleSignUp}
+                style={({ pressed }) => ({
+                  opacity: pressed && loading <= 0 ? 0.88 : 1,
+                })}
               >
                 <LinearGradient
                   colors={
@@ -240,7 +252,7 @@ export default function SignUp() {
                     </Text>
                   )}
                 </LinearGradient>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </ScrollView>

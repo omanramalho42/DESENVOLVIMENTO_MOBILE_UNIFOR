@@ -8,13 +8,13 @@ import {
   createMotionAnimatedComponent,
   MotionComponentProps,
 } from '@legendapp/motion';
-import { tva } from '@gluestack-ui/utils/nativewind-utils';
 import {
+  type VariantProps,
   withStyleContext,
   useStyleContext,
+  tva,
 } from '@gluestack-ui/utils/nativewind-utils';
 import { cssInterop } from 'nativewind';
-import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 
 type IAnimatedPressableProps = React.ComponentProps<typeof Pressable> &
   MotionComponentProps<typeof Pressable, ViewStyle, unknown, unknown, unknown>;
@@ -61,7 +61,7 @@ const modalBackdropStyle = tva({
 });
 
 const modalContentStyle = tva({
-  base: 'bg-background-0 rounded-md overflow-hidden border border-outline-100 shadow-hard-2 p-6',
+  base: 'bg-background-0 rounded-md overflow-hidden border border-outline-100 shadow-hard-2 p-6 web:pointer-events-auto',
   parentVariants: {
     size: {
       xs: 'w-[60%] max-w-[360px]',
@@ -115,7 +115,6 @@ const Modal = React.forwardRef<React.ComponentRef<typeof UIModal>, IModalProps>(
     <UIModal
       ref={ref}
       {...props}
-      pointerEvents="box-none"
       className={modalStyle({ size, class: className })}
       context={{ size }}
     />
@@ -192,7 +191,6 @@ const ModalContent = React.forwardRef<
         size,
         class: className,
       })}
-      pointerEvents="auto"
     />
   );
 });
