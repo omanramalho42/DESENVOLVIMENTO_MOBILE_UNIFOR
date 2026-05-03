@@ -7,6 +7,8 @@ import { getAuth, getReactNativePersistence, initializeAuth } from "firebase/aut
 import type { Auth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import type { FirebaseStorage } from "firebase/storage";
 
 const { FB_API_KEY, FB_AUTH_DOMAIN, FB_PROJECT_ID, FB_STORAGE_BUCKET } =
   settings;
@@ -21,6 +23,7 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 
 if (settings.hasFirebaseSettings) {
   try {
@@ -35,10 +38,12 @@ if (settings.hasFirebaseSettings) {
     }
 
     db = getFirestore(app);
+    storage = getStorage(app);
   } catch {
     app = null;
     auth = null;
     db = null;
+    storage = null;
   }
 }
 
@@ -50,4 +55,4 @@ const getRequiredAuth = () => {
   return auth;
 };
 
-export { app, auth, db, getRequiredAuth };
+export { app, auth, db, getRequiredAuth, storage };

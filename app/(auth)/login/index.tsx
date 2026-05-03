@@ -16,10 +16,10 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -177,24 +177,27 @@ export default function Login() {
                   className="flex-1 text-white ml-3 mr-2 text-[16px] font-normal"
                   style={{ fontFamily: "System" }}
                 />
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setShow((current) => !current)}
                   disabled={loading}
                   hitSlop={10}
+                  style={({ pressed }) => ({
+                    opacity: pressed && !loading ? 0.72 : 1,
+                  })}
                 >
                   <Ionicons
                     name={show ? "eye-off-outline" : "eye-outline"}
                     size={24}
                     color="#A1A1AA"
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <ForgotPasswordDialog
                 open={openForgotPass}
                 setOpen={setOpenForgotPass}
                 onSuccessCallback={handlePasswordReset}
                 trigger={
-                  <TouchableOpacity
+                  <Pressable
                     className="self-end mt-4 mb-2"
                     disabled={loading}
                     hitSlop={10}
@@ -202,6 +205,9 @@ export default function Login() {
                       event.preventDefault();
                       setOpenForgotPass(true);
                     }}
+                    style={({ pressed }) => ({
+                      opacity: pressed && !loading ? 0.72 : 1,
+                    })}
                   >
                     <Text
                       className="text-[#6FC72C] text-[14px] font-medium"
@@ -209,15 +215,17 @@ export default function Login() {
                     >
                       Esqueceu a senha?
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 }
               />
 
-              <TouchableOpacity
+              <Pressable
                 className="mt-4"
-                activeOpacity={0.85}
                 disabled={loading}
                 onPress={handleLogin}
+                style={({ pressed }) => ({
+                  opacity: pressed && !loading ? 0.88 : 1,
+                })}
               >
                 <LinearGradient
                   colors={
@@ -243,7 +251,7 @@ export default function Login() {
                     </Text>
                   )}
                 </LinearGradient>
-              </TouchableOpacity>
+              </Pressable>
 
               <View className="flex-row items-center my-8">
                 <View className="flex-1 h-[1px] bg-[#27272A]" />
@@ -293,9 +301,10 @@ export default function Login() {
               >
                 Nao tem uma conta?{" "}
               </Text>
-              <TouchableOpacity
+              <Pressable
                 hitSlop={10}
                 onPress={() => router.push("../signup")}
+                style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}
               >
                 <Text
                   className="text-[#6FC72C] text-[15px] font-semibold"
@@ -303,7 +312,7 @@ export default function Login() {
                 >
                   Criar conta
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
