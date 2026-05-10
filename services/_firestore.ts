@@ -1,5 +1,5 @@
 import { db } from "@/services/_firebase";
-import { doc, getDoc, getDocFromCache, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, getDoc, getDocFromCache, query, setDoc, where } from "firebase/firestore";
 
 export class FirestoreServiceError extends Error {
   constructor(message: string) {
@@ -20,7 +20,6 @@ const normalizeTipoUsuario = (value: unknown) => {
   if (typeof value !== "string") {
     return "";
   }
-
   return value.trim().toLowerCase();
 };
 
@@ -28,8 +27,20 @@ const getFirebaseErrorCode = (error: unknown) => {
   if (typeof error === "object" && error && "code" in error) {
     return String((error as { code?: unknown }).code ?? "");
   }
-
   return "";
+};
+
+const verificarDocumentoDuplicado = async (
+  documento: string,
+  uidAtual: string
+): Promise<boolean> => {
+  if (!db) return false;
+
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("documento", "==", documento));
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.some((d) => d.id !== uidAtual);
 };
 
 export const salvarDoador = async (
@@ -43,6 +54,14 @@ export const salvarDoador = async (
   }
 
   try {
+    const duplicado = await verificarDocumentoDuplicado(data.documento, uid);
+
+    if (duplicado) {
+      throw new FirestoreServiceError(
+        `Este ${data.tipoDocumento.toUpperCase()} já está cadastrado por outro usuário.`
+      );
+    }
+
     const userRef = doc(db, "users", uid);
     await setDoc(
       userRef,
@@ -54,6 +73,9 @@ export const salvarDoador = async (
       { merge: true }
     );
   } catch (error) {
+    if (error instanceof FirestoreServiceError) {
+      throw error;
+    }
     console.error("Erro ao salvar doador:", error);
     throw new FirestoreServiceError(
       "Não foi possível salvar os dados. Tente novamente."
@@ -82,7 +104,6 @@ export const verificarUsuarioDoador = async (uid: string): Promise<boolean> => {
         return normalizeTipoUsuario(cachedSnapshot.data().tipoUsuario) === "doador";
       }
     } catch {
-      // Ignora cache vazio e segue para consulta principal.
     }
 
     const userSnapshot = await getDoc(userRef);

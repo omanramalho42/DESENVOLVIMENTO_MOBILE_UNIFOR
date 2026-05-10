@@ -1,6 +1,5 @@
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
-import { useLoading } from "@/store";
 import { apenasDigitos, formatarCNPJ, formatarCPF, validarCNPJ, validarCPF } from "@/utils/validation";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -30,13 +29,11 @@ const absoluteFill = {
 
 export default function BecomeDonor() {
   const { user } = useAuth();
-  const { startLoading, stopLoading, loading } = useLoading();
 
   const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>("cpf");
   const [documento, setDocumento] = useState("");
   const [endereco, setEndereco] = useState("");
-
-  const isLoading = loading > 0;
+  const [submitting, setSubmitting] = useState(false);
 
   const handleTipoChange = (tipo: TipoDocumento) => {
     setTipoDocumento(tipo);
@@ -74,20 +71,20 @@ export default function BecomeDonor() {
     }
 
     try {
-      startLoading();
+      setSubmitting(true);
       await salvarDoador(user.uid, {
         documento: digitos,
         tipoDocumento,
         endereco: endereco.trim(),
       });
-      stopLoading();
+      setSubmitting(false);
       Alert.alert(
         "Cadastro realizado! 🎉",
         "Você agora é um doador do Alimenta+.",
         [{ text: "Continuar", onPress: () => router.replace("/(tabs)/home" as any) }]
       );
     } catch (error) {
-      stopLoading();
+      setSubmitting(false);
       const mensagem =
         error instanceof FirestoreServiceError
           ? error.message
@@ -120,7 +117,7 @@ export default function BecomeDonor() {
             <TouchableOpacity
               onPress={() => router.back()}
               hitSlop={12}
-              disabled={isLoading}
+              disabled={submitting}
               className="mb-6"
             >
               <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
@@ -163,7 +160,7 @@ export default function BecomeDonor() {
                   <TouchableOpacity
                     key={tipo}
                     onPress={() => handleTipoChange(tipo)}
-                    disabled={isLoading}
+                    disabled={submitting}
                     style={{
                       flex: 1,
                       height: 44,
@@ -198,7 +195,7 @@ export default function BecomeDonor() {
                 placeholder={tipoDocumento === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
                 placeholderTextColor="#6B7280"
                 keyboardType="numeric"
-                editable={!isLoading}
+                editable={!submitting}
                 className="ml-3 flex-1 text-[16px] text-white"
               />
             </View>
@@ -223,7 +220,7 @@ export default function BecomeDonor() {
                 placeholderTextColor="#6B7280"
                 multiline
                 numberOfLines={3}
-                editable={!isLoading}
+                editable={!submitting}
                 className="ml-3 flex-1 text-[16px] text-white"
                 style={{ textAlignVertical: "top" }}
               />
@@ -234,7 +231,7 @@ export default function BecomeDonor() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              disabled={isLoading}
+              disabled={submitting}
               onPress={handleSubmit}
               className="overflow-hidden rounded-[22px]"
             >
@@ -249,7 +246,7 @@ export default function BecomeDonor() {
                   justifyContent: "center",
                 }}
               >
-                {isLoading ? (
+                {submitting ? (
                   <ActivityIndicator color="#081106" />
                 ) : (
                   <Text
