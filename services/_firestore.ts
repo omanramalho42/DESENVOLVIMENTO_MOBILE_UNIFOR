@@ -1,10 +1,10 @@
-import { settings } from "@/settings";
 import {
   CloudinaryServiceError,
   deleteByToken,
   uploadImages,
 } from "@/services/_cloudinary";
 import { db } from "@/services/_firebase";
+import { settings } from "@/settings";
 import {
   CloudinaryImageUploadResult,
   DonationDocument,
@@ -161,5 +161,60 @@ export const salvarDoacao = async ({
     throw new FirestoreServiceError(
       "Não foi possível cadastrar a doação. Tente novamente."
     );
+  }
+};
+
+import { getDocs, orderBy, query, where } from "firebase/firestore";
+// Certifique-se de importar o seu 'db' do arquivo de configuração do Firebase
+
+export interface DonationItem {
+  id: string;
+  title: string;
+  weight: string;
+  distance: string; // Como o cálculo de distância depende de GPS, usaremos um valor padrão por enquanto
+  date: string;
+  category: string;
+  imageUri: string;
+}
+
+export const buscarDoacoes = async (): Promise<DonationItem[]> => {
+  if (!db) {
+    throw new Error("Banco de dados não configurado.");
+  }
+
+  try {
+    // Busca apenas as doações que estão com status disponível, ordenando pelas mais recentes
+    const q = query(
+      collection(db, "donations"),
+      where("status", "==", "disponivel"),
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(q);
+    const donationsList: DonationItem[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      
+      // Captura a primeira imagem enviada ao Cloudinary se houver, caso contrário usa um placeholder seguro
+      const imageUri = data.fotos && data.fotos.length > 0 
+        ? data.fotos[0].secureUrl 
+        : "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=300";
+
+      donationsList.push({
+        id: doc.id,
+        title: data.tipoAlimento || "Alimento Sem Nome",
+        weight: data.quantidade || "Quantidade não especificada",
+        distance: "Próximo a você", // Aqui futuramente você poderá calcular a distância real com a Geolocalização
+        date: data.validade || "Não informada",
+        category: data.categoria || "Todas",
+        imageUri: imageUri,
+      });
+    });
+
+    return donationsList;
+  } catch (error) {
+    console.error("Erro ao buscar doações do Firestore:", error);
+    throw error;
   }
 };
