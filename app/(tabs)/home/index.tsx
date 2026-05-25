@@ -1,5 +1,17 @@
 import { DonationCard } from "@/components";
-import { Box, Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text } from "@/components/ui";
+import {
+  Box,
+  Button,
+  ButtonText,
+  HStack,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Text,
+} from "@/components/ui";
 import { listarDoacoes } from "@/services";
 import { useLoading } from "@/store";
 import { DonationDocumentWithId, DonationStatus } from "@/types";
@@ -8,11 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const LOCATION_PERMISSION_KEY = "@location_permission_granted";
@@ -63,12 +71,16 @@ export default function Home() {
     };
 
     loadDonations();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const checkLocationPermission = async () => {
     try {
-      const alreadyAccepted = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
+      const alreadyAccepted = await AsyncStorage.getItem(
+        LOCATION_PERMISSION_KEY,
+      );
       const { status } = await Location.getForegroundPermissionsAsync();
       if (alreadyAccepted === "true" || status === "granted") return;
       setShowLocationModal(true);
@@ -114,7 +126,9 @@ export default function Home() {
   const filteredDonations = useMemo(() => {
     return donationCards.filter((item) => {
       const matchesCategory =
-        selectedCategory === "Todas" ? true : item.category === selectedCategory;
+        selectedCategory === "Todas"
+          ? true
+          : item.category === selectedCategory;
       const searchTerm = search.toLowerCase();
       const matchesSearch =
         item.title.toLowerCase().includes(searchTerm) ||
@@ -164,29 +178,26 @@ export default function Home() {
         <Box className="h-12 mb-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {categories.map((cat) => (
-              <TouchableOpacity
+              <Button
                 key={cat}
                 onPress={() => setSelectedCategory(cat)}
-                activeOpacity={0.8}
+                className={`${
+                  selectedCategory === cat ? "bg-[#1E3A0A]" : "bg-[#27272A]"
+                } mr-2 px-6 rounded-xl h-10 border-0 items-center justify-center`}
               >
-                <Button
+                <ButtonText
                   className={`${
-                    selectedCategory === cat ? "bg-[#1E3A0A]" : "bg-[#27272A]"
-                  } mr-2 px-6 rounded-xl h-10 border-0 items-center justify-center`}
+                    selectedCategory === cat
+                      ? "text-[#84CC16] font-bold"
+                      : "text-gray-300"
+                  } text-center text-sm`}
                 >
-                  <ButtonText
-                    className={`${
-                      selectedCategory === cat ? "text-[#84CC16] font-bold" : "text-gray-300"
-                    } text-center text-sm`}
-                  >
-                    {cat}
-                  </ButtonText>
-                </Button>
-              </TouchableOpacity>
+                  {cat}
+                </ButtonText>
+              </Button>
             ))}
           </ScrollView>
         </Box>
-
         {/* Resultados */}
         <Text className="text-[#71717A] mb-4 text-sm">
           {filteredDonations.length} doação(ões) encontrada(s)
@@ -208,7 +219,12 @@ export default function Home() {
                 date={item.date}
                 imageUri={item.imageUri}
                 status={item.status}
-                onPress={() => router.push(`/(tabs)/home/${item.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/home/[id]",
+                    params: { id: item.id },
+                  })
+                }
               />
             ))
           ) : (
@@ -243,7 +259,8 @@ export default function Home() {
               Habilitar localização
             </Text>
             <Text className="text-[#A1A1AA] text-center leading-6">
-              Precisamos da sua localização para mostrar doações próximas de você em tempo real.
+              Precisamos da sua localização para mostrar doações próximas de
+              você em tempo real.
             </Text>
           </ModalBody>
           <ModalFooter className="flex-col pb-6 pt-4">
@@ -251,7 +268,9 @@ export default function Home() {
               onPress={handleEnableLocation}
               className="bg-[#65A30D] w-full rounded-2xl h-12 mb-3"
             >
-              <ButtonText className="text-white font-semibold">Permitir acesso</ButtonText>
+              <ButtonText className="text-white font-semibold">
+                Permitir acesso
+              </ButtonText>
             </Button>
             <TouchableOpacity onPress={() => setShowLocationModal(false)}>
               <Text className="text-[#A1A1AA] text-center">Agora não</Text>
