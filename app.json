@@ -29,6 +29,12 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Precisamos da sua localização para mostrar doações próximas."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

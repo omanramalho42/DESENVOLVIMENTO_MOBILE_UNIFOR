@@ -1,22 +1,16 @@
 import { DonationCard } from "@/components";
-import { Box, Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text } from "@/components/ui";
+import { Box, Button, ButtonText, HStack, Text } from "@/components/ui";
 import { listarDoacoes } from "@/services";
 import { useLoading } from "@/store";
 import { DonationDocumentWithId, DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const LOCATION_PERMISSION_KEY = "@location_permission_granted";
-
+import DonationCardSkeleton from "./components/donnations-card-skeleton";
+import LocalizationModal from "./components/Locazilaztion-modal";
 const baseCategories = ["Todas", "Prontos", "Frutas", "Verduras", "Pães"];
 
 type DonationCardItem = {
@@ -31,90 +25,137 @@ type DonationCardItem = {
 };
 
 export default function Home() {
-  const [showLocationModal, setShowLocationModal] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const { startLoading, stopLoading } = useLoading();
   const [donations, setDonations] = useState<DonationDocumentWithId[]>([]);
   const [donationsError, setDonationsError] = useState<string | null>(null);
 
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   useEffect(() => {
-    checkLocationPermission();
-  }, []);
+    const getUserLocation = async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
 
+        if (status !== "granted") return;
+
+        const location = await Location.getCurrentPositionAsync({});
+
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    getUserLocation();
+  }, []);
+  function calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ) {
+    const R = 6371;
+
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+  const [loading, setLoading] = useState<boolean>(false);
   useEffect(() => {
     let active = true;
 
     const loadDonations = async () => {
+      setLoading(true);
       startLoading();
+
       try {
         setDonationsError(null);
+
         const data = await listarDoacoes();
-        if (active) setDonations(data);
+
+        if (active) {
+          setDonations(data);
+        }
       } catch (error) {
         console.error("Erro ao carregar doações:", error);
+
         if (active) {
           setDonationsError("Não foi possível carregar as doações.");
           setDonations([]);
         }
       } finally {
-        if (active) stopLoading();
+        if (active) {
+          stopLoading();
+          setLoading(false);
+        }
       }
     };
 
     loadDonations();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const checkLocationPermission = async () => {
-    try {
-      const alreadyAccepted = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (alreadyAccepted === "true" || status === "granted") return;
-      setShowLocationModal(true);
-    } catch (error) {
-      console.log("Erro ao verificar localização:", error);
-    }
-  };
-
-  const handleEnableLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === "granted") {
-        await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
-        setShowLocationModal(false);
-      }
-    } catch (error) {
-      console.log("Erro ao solicitar localização:", error);
-    }
-  };
 
   const categories = useMemo(() => {
     const fromData = donations.map((d) => d.categoria).filter(Boolean);
     return Array.from(new Set([...baseCategories, ...fromData]));
   }, [donations]);
 
-  const donationCards = useMemo<DonationCardItem[]>(
+  const donationCards = useMemo(
     () =>
-      donations.map((donation) => ({
-        id: donation.id,
-        title: donation.tipoAlimento,
-        weight: donation.quantidade,
-        distance: donation.localizacao
-          ? `Local: ${donation.localizacao}`
-          : "Localização não informada",
-        date: donation.validade,
-        category: donation.categoria,
-        imageUri: donation.fotos?.[0]?.secureUrl ?? null,
-        status: donation.status,
-      })),
-    [donations],
+      donations.map((donation) => {
+        let distance = "Distância indisponível";
+
+        if (userLocation && donation.latitude && donation.longitude) {
+          const km = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            donation.latitude,
+            donation.longitude,
+          );
+
+          distance = `${km.toFixed(1)} km`;
+        }
+
+        return {
+          id: donation.id,
+          title: donation.tipoAlimento,
+          weight: donation.quantidade,
+          distance,
+          date: donation.validade,
+          category: donation.categoria,
+          imageUri: donation.fotos?.[0]?.secureUrl ?? null,
+          status: donation.status,
+        };
+      }),
+    [donations, userLocation],
   );
 
   const filteredDonations = useMemo(() => {
     return donationCards.filter((item) => {
       const matchesCategory =
-        selectedCategory === "Todas" ? true : item.category === selectedCategory;
+        selectedCategory === "Todas"
+          ? true
+          : item.category === selectedCategory;
       const searchTerm = search.toLowerCase();
       const matchesSearch =
         item.title.toLowerCase().includes(searchTerm) ||
@@ -176,7 +217,9 @@ export default function Home() {
                 >
                   <ButtonText
                     className={`${
-                      selectedCategory === cat ? "text-[#84CC16] font-bold" : "text-gray-300"
+                      selectedCategory === cat
+                        ? "text-[#84CC16] font-bold"
+                        : "text-gray-300"
                     } text-center text-sm`}
                   >
                     {cat}
@@ -198,7 +241,60 @@ export default function Home() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {filteredDonations.length > 0 ? (
+          {loading ? (
+            <>
+              <DonationCardSkeleton />
+              <DonationCardSkeleton />
+              <DonationCardSkeleton />
+              <DonationCardSkeleton />
+            </>
+          ) : donationsError ? (
+            <Box className="items-center justify-center mt-20 px-6">
+              <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
+                <FontAwesome5
+                  name="exclamation-triangle"
+                  size={28}
+                  color="#EF4444"
+                />
+              </Box>
+
+              <Text className="text-white text-lg font-semibold mb-2 text-center">
+                Erro ao carregar
+              </Text>
+
+              <Text className="text-[#71717A] text-center">
+                {donationsError}
+              </Text>
+            </Box>
+          ) : donations.length === 0 ? (
+            <Box className="items-center justify-center mt-20 px-6">
+              <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
+                <FontAwesome5 name="box-open" size={28} color="#71717A" />
+              </Box>
+
+              <Text className="text-white text-lg font-semibold mb-2 text-center">
+                Nenhuma doação cadastrada
+              </Text>
+
+              <Text className="text-[#71717A] text-center">
+                Ainda não existem doações disponíveis.
+              </Text>
+            </Box>
+          ) : filteredDonations.length === 0 ? (
+            <Box className="items-center justify-center mt-20 px-6">
+              <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
+                <FontAwesome5 name="search" size={28} color="#71717A" />
+              </Box>
+
+              <Text className="text-white text-lg font-semibold mb-2 text-center">
+                Nenhum resultado encontrado
+              </Text>
+
+              <Text className="text-[#71717A] text-center">
+                Tente alterar a busca ou selecionar outra categoria.
+              </Text>
+            </Box>
+          ) : (
             filteredDonations.map((item) => (
               <DonationCard
                 key={item.id}
@@ -211,54 +307,12 @@ export default function Home() {
                 onPress={() => router.push(`/(tabs)/home/${item.id}` as any)}
               />
             ))
-          ) : (
-            <Box className="items-center justify-center mt-20">
-              <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
-                <FontAwesome5 name="search" size={28} color="#71717A" />
-              </Box>
-              <Text className="text-white text-lg font-semibold mb-2">
-                {donationsError ?? "Nenhuma doação encontrada"}
-              </Text>
-              <Text className="text-[#71717A] text-center px-8">
-                {donationsError
-                  ? "Tente novamente mais tarde."
-                  : "Tente pesquisar outro alimento ou mudar a categoria."}
-              </Text>
-            </Box>
           )}
         </ScrollView>
       </Box>
 
       {/* Modal de localização */}
-      <Modal isOpen={showLocationModal}>
-        <ModalBackdrop />
-        <ModalContent className="bg-[#18181B] border border-[#27272A] rounded-[28px] mx-6">
-          <ModalHeader className="items-center pt-6">
-            <Box className="bg-[#1E3A0A] w-16 h-16 rounded-full items-center justify-center mb-4">
-              <FontAwesome5 name="map-marker-alt" size={24} color="#84CC16" />
-            </Box>
-          </ModalHeader>
-          <ModalBody className="pb-2">
-            <Text className="text-white text-xl font-bold text-center mb-3">
-              Habilitar localização
-            </Text>
-            <Text className="text-[#A1A1AA] text-center leading-6">
-              Precisamos da sua localização para mostrar doações próximas de você em tempo real.
-            </Text>
-          </ModalBody>
-          <ModalFooter className="flex-col pb-6 pt-4">
-            <Button
-              onPress={handleEnableLocation}
-              className="bg-[#65A30D] w-full rounded-2xl h-12 mb-3"
-            >
-              <ButtonText className="text-white font-semibold">Permitir acesso</ButtonText>
-            </Button>
-            <TouchableOpacity onPress={() => setShowLocationModal(false)}>
-              <Text className="text-[#A1A1AA] text-center">Agora não</Text>
-            </TouchableOpacity>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <LocalizationModal />
     </SafeAreaView>
   );
 }
