@@ -450,6 +450,9 @@ export default function Home() {
     });
   }, [donationCards, search, selectedCategory]);
 
+  const currentLocationLabel = locationValue.trim();
+  const normalizedLocationInput = normalizeText(locationInput);
+
   return (
     <SafeAreaView className="flex-1 bg-[#0B0F0C]">
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
@@ -531,8 +534,8 @@ export default function Home() {
         >
           <FontAwesome5 name="map-marker-alt" size={12} color="#65A30D" />
           <Text className="text-[#A1A1AA] text-[13px] ml-2 flex-1" numberOfLines={1}>
-            {locationValue.trim()
-              ? locationValue.trim()
+            {currentLocationLabel
+              ? currentLocationLabel
               : userCoords
                 ? "Usando localização atual"
                 : "Toque para definir sua localização"}
@@ -645,7 +648,7 @@ export default function Home() {
                   <View className="mt-4">
                     <Text className="text-[#A1A1AA] text-sm mb-2">Endereços salvos</Text>
                     {savedAddresses.map((address) => {
-                      const isSelected = normalizeText(address) === normalizeText(locationInput);
+                      const isSelected = normalizeText(address) === normalizedLocationInput;
                       return (
                         <TouchableOpacity
                           key={address}
