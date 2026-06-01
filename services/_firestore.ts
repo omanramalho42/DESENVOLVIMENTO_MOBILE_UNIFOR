@@ -25,6 +25,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import * as Location from "expo-location";
 
 export class FirestoreServiceError extends Error {
   constructor(message: string) {
@@ -133,12 +134,27 @@ export const salvarDoacao = async ({
         })
       : [];
 
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+
+  try {
+    const [geoResult] = await Location.geocodeAsync(endereco.trim());
+    if (geoResult) {
+      latitude = geoResult.latitude;
+      longitude = geoResult.longitude;
+    }
+  } catch (geoError) {
+    console.log("Erro ao geocodificar endereço da doação:", geoError);
+  }
+
   const donation: DonationDocument = {
     tipoAlimento: nomeAlimento.trim(),
     quantidade: quantidade.trim(),
     descricao: descricao.trim(),
     validade: validade.trim(),
     localizacao: endereco.trim(),
+    latitude,
+    longitude,
     disponibilidade: `${dataRetirada.trim()} - ${horarioInicio.trim()} até ${horarioFim.trim()}`,
     perecivel: tipoAlimento === "Perecível",
     observacoes: "",
