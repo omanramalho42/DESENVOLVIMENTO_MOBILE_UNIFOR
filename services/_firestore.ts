@@ -13,6 +13,7 @@ import {
   SalvarDoacaoParams,
   UserProfile,
 } from "@/types";
+import * as Location from "expo-location";
 import {
   addDoc,
   collection,
@@ -133,12 +134,32 @@ export const salvarDoacao = async ({
         })
       : [];
 
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+
+  const normalizedEndereco = endereco.trim();
+
+  if (normalizedEndereco) {
+    try {
+      const geocoded = await Location.geocodeAsync(normalizedEndereco);
+      const firstResult = geocoded[0];
+      if (firstResult) {
+        latitude = firstResult.latitude;
+        longitude = firstResult.longitude;
+      }
+    } catch (error) {
+      console.error("Erro ao geocodificar endereço da doação:", error);
+    }
+  }
+
   const donation: DonationDocument = {
     tipoAlimento: nomeAlimento.trim(),
     quantidade: quantidade.trim(),
     descricao: descricao.trim(),
     validade: validade.trim(),
-    localizacao: endereco.trim(),
+    localizacao: normalizedEndereco,
+    latitude,
+    longitude,
     disponibilidade: `${dataRetirada.trim()} - ${horarioInicio.trim()} até ${horarioFim.trim()}`,
     perecivel: tipoAlimento === "Perecível",
     observacoes: "",
