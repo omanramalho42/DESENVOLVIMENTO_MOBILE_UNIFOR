@@ -28,6 +28,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const LOCATION_PERMISSION_KEY = "@location_permission_granted";
 const baseCategories = ["Todas", "Prontos", "Frutas", "Verduras", "Pães"];
+const MAX_ADDRESS_CACHE_SIZE = 200;
 
 type Coordinates = {
   latitude: number;
@@ -344,6 +345,10 @@ export default function Home() {
       }
 
       const coords = { latitude: result.latitude, longitude: result.longitude };
+      if (addressCoordsRef.current.size >= MAX_ADDRESS_CACHE_SIZE) {
+        const firstKey = addressCoordsRef.current.keys().next().value;
+        if (firstKey) addressCoordsRef.current.delete(firstKey);
+      }
       addressCoordsRef.current.set(normalized, coords);
       return coords;
     } catch (error) {
@@ -362,26 +367,26 @@ export default function Home() {
         return;
       }
 
-      const entries = await Promise.all(
-        donations.map(async (donation) => {
-          const hasCoords =
-            typeof donation.latitude === "number" &&
-            typeof donation.longitude === "number";
+      const entries: Array<readonly [string, number | null]> = [];
+      for (const donation of donations) {
+        const hasCoords =
+          typeof donation.latitude === "number" &&
+          typeof donation.longitude === "number" &&
+          Number.isFinite(donation.latitude) &&
+          Number.isFinite(donation.longitude);
 
-          const coords = hasCoords
-            ? {
-                latitude: donation.latitude as number,
-                longitude: donation.longitude as number,
-              }
-            : donation.localizacao
-              ? await resolveAddressCoords(donation.localizacao)
-              : null;
+        const coords = hasCoords
+          ? {
+              latitude: donation.latitude as number,
+              longitude: donation.longitude as number,
+            }
+          : donation.localizacao
+            ? await resolveAddressCoords(donation.localizacao)
+            : null;
 
-          const distance = coords ? calculateDistanceMeters(userCoords, coords) : null;
-
-          return [donation.id, distance] as const;
-        }),
-      );
+        const distance = coords ? calculateDistanceMeters(userCoords, coords) : null;
+        entries.push([donation.id, distance] as const);
+      }
 
       if (active) setDistanceByDonationId(Object.fromEntries(entries));
     };
