@@ -13,6 +13,7 @@ import {
   SalvarDoacaoParams,
   UserProfile,
 } from "@/types";
+import * as ExpoLocation from "expo-location";
 import {
   addDoc,
   collection,
@@ -35,11 +36,11 @@ export class FirestoreServiceError extends Error {
 
 export const salvarDoador = async (
   uid: string,
-  data: Omit<DonorData, "tipoUsuario" | "atualizadoEm">
+  data: Omit<DonorData, "tipoUsuario" | "atualizadoEm">,
 ): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
-      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase.",
     );
   }
 
@@ -52,18 +53,18 @@ export const salvarDoador = async (
         tipoUsuario: "doador",
         atualizadoEm: new Date().toISOString(),
       },
-      { merge: true }
+      { merge: true },
     );
   } catch (error) {
     console.error("Erro ao salvar doador:", error);
     throw new FirestoreServiceError(
-      "Não foi possível salvar os dados. Tente novamente."
+      "Não foi possível salvar os dados. Tente novamente.",
     );
   }
 };
 
 export const verificarSeUsuarioEhDoador = async (
-  uid?: string | null
+  uid?: string | null,
 ): Promise<boolean> => {
   if (!uid || !db) {
     return false;
@@ -79,7 +80,11 @@ export const verificarSeUsuarioEhDoador = async (
 
     const data = userSnap.data();
 
-    return String(data?.tipoUsuario || "").trim().toLowerCase() === "doador";
+    return (
+      String(data?.tipoUsuario || "")
+        .trim()
+        .toLowerCase() === "doador"
+    );
   } catch (error) {
     console.error("Erro ao validar doador:", error);
     return false;
@@ -90,12 +95,14 @@ const buildDonationFolder = (userId: string | null) =>
   `alimenta-mais/donations/${userId ?? "anonymous"}`;
 
 const rollbackCloudinaryUploads = async (
-  uploads: CloudinaryImageUploadResult[]
+  uploads: CloudinaryImageUploadResult[],
 ) => {
   await Promise.allSettled(
     uploads.map((upload) =>
-      upload.deleteToken ? deleteByToken(upload.deleteToken) : Promise.resolve()
-    )
+      upload.deleteToken
+        ? deleteByToken(upload.deleteToken)
+        : Promise.resolve(),
+    ),
   );
 };
 
@@ -116,13 +123,13 @@ export const salvarDoacao = async ({
 }: SalvarDoacaoParams): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
-      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase.",
     );
   }
 
   if (fotos.length > 0 && !settings.hasCloudinarySettings) {
     throw new CloudinaryServiceError(
-      "Cloudinary não está configurado. Preencha EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME e EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET."
+      "Cloudinary não está configurado. Preencha EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME e EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET.",
     );
   }
 
@@ -165,7 +172,7 @@ export const salvarDoacao = async ({
     });
     console.error("Erro ao cadastrar doação:", error);
     throw new FirestoreServiceError(
-      "Não foi possível cadastrar a doação. Tente novamente."
+      "Não foi possível cadastrar a doação. Tente novamente.",
     );
   }
 };
@@ -187,7 +194,7 @@ export const solicitarDoacao = async (
 ): Promise<void> => {
   if (!db) {
     throw new FirestoreServiceError(
-      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase.",
     );
   }
 
@@ -204,12 +211,12 @@ export const solicitarDoacao = async (
 
     if (data.status !== "disponivel") {
       throw new FirestoreServiceError(
-        "Esta doação já foi reivindicada por outro usuário."
+        "Esta doação já foi reivindicada por outro usuário.",
       );
     }
 
     transaction.update(donationRef, {
-      status: "indisponivel"
+      status: "indisponivel",
     });
 
     const solicitacaoRef = doc(collection(db!, "solicitacoes"));
@@ -230,7 +237,7 @@ export const solicitarDoacao = async (
 };
 
 export const buscarDoacao = async (
-  id: string
+  id: string,
 ): Promise<DonationDocumentWithId | null> => {
   if (!db) return null;
   try {
@@ -241,35 +248,81 @@ export const buscarDoacao = async (
     return null;
   }
 };
-
+// Definição da nova estrutura de localização que o front-end espera
+export type GeocodedLocation = {
+  address_text: string;
+  latitude: number | null;
+  longitude: number | null;
+};
 export const listarDoacoes = async (): Promise<DonationDocumentWithId[]> => {
   if (!db) {
     throw new FirestoreServiceError(
-      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase."
+      "Banco de dados não configurado. Verifique as variáveis de ambiente do Firebase.",
     );
   }
 
   try {
     const donationsQuery = query(
       collection(db, "donations"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
     const snapshot = await getDocs(donationsQuery);
 
-    return snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...(docSnap.data() as DonationDocument),
-    }));
+    const donationsWithGeo = await Promise.all(
+      snapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data() as any;
+
+        let localizacaoTexto = "Localização não informada";
+        let latitude = null;
+        let longitude = null;
+
+        // Verifica se a localização é uma string válida para fazer a busca
+        if (
+          typeof data.localizacao === "string" &&
+          data.localizacao.trim() !== ""
+        ) {
+          localizacaoTexto = data.localizacao;
+
+          try {
+            // Usa a biblioteca para converter o texto do endereço em coordenadas geográficas
+            const geocodeResults = await ExpoLocation.geocodeAsync(
+              data.localizacao,
+            );
+
+            if (geocodeResults.length > 0) {
+              latitude = geocodeResults[0].latitude;
+              longitude = geocodeResults[0].longitude;
+            }
+          } catch (geoError) {
+            // Silencia o erro de um endereço específico para não travar a listagem inteira do app
+            console.warn(
+              `Não foi possível obter coordenadas para o endereço: "${data.localizacao}"`,
+              geoError,
+            );
+          }
+        }
+
+        return {
+          ...data,
+          id: docSnap.id,
+          localizacao: localizacaoTexto, // Mantém o texto original intacto para as telas antigas
+          latitude: latitude, // Injeta a latitude extraída na raiz do objeto
+          longitude: longitude, // Injeta a longitude extraída na raiz do objeto
+        } as DonationDocumentWithId;
+      }),
+    );
+
+    return donationsWithGeo;
   } catch (error) {
     console.error("Erro ao carregar doações:", error);
     throw new FirestoreServiceError(
-      "Não foi possível carregar as doações. Tente novamente."
+      "Não foi possível carregar as doações. Tente novamente.",
     );
   }
 };
 
 export const buscarPerfilUsuario = async (
-  uid: string
+  uid: string,
 ): Promise<UserProfile | null> => {
   if (!db) return null;
   try {
