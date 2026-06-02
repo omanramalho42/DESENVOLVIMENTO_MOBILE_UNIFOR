@@ -124,23 +124,27 @@ export default function Home() {
     () =>
       donations.map((donation) => {
         let distance = "Distância indisponível";
-
+        // console.log(donation, "🔥");
+        // console.log(userLocation, donation.latitude, donation.longitude, "🗺️");
         if (userLocation && donation.latitude && donation.longitude) {
-          const km = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            donation.latitude,
-            donation.longitude,
+          const distanceStr = calculateDistance(
+            userLocation?.latitude,
+            userLocation?.longitude,
+            donation.latitude, // 👈 Mudou aqui (acessa direto da raiz)
+            donation.longitude, // 👈 Mudou aqui (acessa direto da raiz)
           );
 
-          distance = `${km.toFixed(1)} km`;
+          distance = `${distanceStr.toFixed(1)} km`;
         }
 
         return {
           id: donation.id,
           title: donation.tipoAlimento,
           weight: donation.quantidade,
-          distance,
+          distance:
+            distance !== "Distância indisponível"
+              ? distance
+              : donation.localizacao, // 👈 Se falhar, usa o texto puro da localização
           date: donation.validade,
           category: donation.categoria,
           imageUri: donation.fotos?.[0]?.secureUrl ?? null,
