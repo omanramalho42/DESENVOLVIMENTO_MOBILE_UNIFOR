@@ -9,7 +9,6 @@ import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import DonationCardSkeleton from "./components/donnations-card-skeleton";
 import LocalizationModal from "./components/Locazilaztion-modal";
 const baseCategories = ["Todas", "Prontos", "Frutas", "Verduras", "Pães"];
 
@@ -245,14 +244,7 @@ export default function Home() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {loading ? (
-            <>
-              <DonationCardSkeleton />
-              <DonationCardSkeleton />
-              <DonationCardSkeleton />
-              <DonationCardSkeleton />
-            </>
-          ) : donationsError ? (
+          {donationsError ? (
             <Box className="items-center justify-center mt-20 px-6">
               <Box className="bg-[#18181B] w-20 h-20 rounded-full items-center justify-center mb-4">
                 <FontAwesome5
@@ -305,6 +297,7 @@ export default function Home() {
                 title={item.title}
                 weight={item.weight}
                 distance={item.distance}
+                isLoading={loading}
                 date={item.date}
                 imageUri={item.imageUri}
                 status={item.status}
