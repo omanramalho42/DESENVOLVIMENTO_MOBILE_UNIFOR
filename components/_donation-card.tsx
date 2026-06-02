@@ -1,3 +1,4 @@
+import { BadgeDistance } from "@/app/(tabs)/home/components/badge-distance";
 import { Box, HStack, Text, VStack } from "@/components/ui";
 import { DonationStatus } from "@/types";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
@@ -40,15 +41,7 @@ export const DonationCard = ({
 
           <Text className="text-[#A1A1AA] text-sm mb-2">{weight}</Text>
 
-          <Box className="bg-[#1E3A0A] px-3 py-1 rounded-full mb-2">
-            <HStack className="flex-row items-center">
-              <FontAwesome5 name="map-marker-alt" size={10} color="#84CC16" />
-
-              <Text className="text-[#84CC16] text-xs font-semibold ml-2">
-                {distance}
-              </Text>
-            </HStack>
-          </Box>
+          <BadgeDistance distance={distance} />
 
           <HStack className="flex-row items-center">
             <FontAwesome5 name="clock" size={12} color="#65A30D" />
