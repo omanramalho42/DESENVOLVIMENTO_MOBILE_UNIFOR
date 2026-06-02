@@ -1,7 +1,8 @@
+import { ShowNotificationsDialog } from "@/components/show-notifications-dialog";
 import { useUser } from "@/store";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
-
+import { Text, TouchableOpacity } from "react-native";
 export default function TabLayout() {
   const isDoador = useUser((s) => s.isDoador);
 
@@ -45,6 +46,48 @@ export default function TabLayout() {
               color={color}
             />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="notificacoes/index"
+        options={{
+          title: "Notificações",
+          tabBarButton: (props) => {
+            // 1. Extraímos apenas o estado visual e a ação de clique do router
+            const isSelected = props.accessibilityState?.selected;
+            const onPress = props.onPress;
+
+            return (
+              <ShowNotificationsDialog
+                trigger={
+                  // 2. Passamos apenas propriedades estritas do TouchableOpacity nativo
+                  <TouchableOpacity
+                    onPress={onPress}
+                    activeOpacity={0.7}
+                    className="flex-1 items-center justify-center"
+                    style={{ width: 75 }}
+                  >
+                    <MaterialCommunityIcons
+                      size={24}
+                      name={isSelected ? "bell" : "bell-outline"}
+                      color={isSelected ? "#65C90F" : "#A3A3A3"}
+                    />
+                    <Text
+                      style={{
+                        color: isSelected ? "#65C90F" : "#A3A3A3",
+                        fontSize: 11,
+                        fontWeight: "500",
+                        marginTop: 2,
+                      }}
+                    >
+                      Notificações
+                    </Text>
+                  </TouchableOpacity>
+                }
+              />
+            );
+          },
         }}
       />
 
