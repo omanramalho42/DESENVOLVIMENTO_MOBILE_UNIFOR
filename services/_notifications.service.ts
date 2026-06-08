@@ -5,7 +5,7 @@ import { useNotificationsStore } from "@/store/notifications.store";
 export class NotificationService {
   static newDonation(donorName: string, donationId: string) {
     useNotificationsStore.getState().addNotification({
-      id: crypto.randomUUID(),
+      id: "crypto.randomUUID()",
 
       title: "Nova doação disponível 🍎",
 
@@ -23,7 +23,7 @@ export class NotificationService {
 
   static donationAccepted(donationName: string) {
     useNotificationsStore.getState().addNotification({
-      id: crypto.randomUUID(),
+      id: "crypto.randomUUID()",
 
       title: "Solicitação aceita 🎉",
 
@@ -39,7 +39,7 @@ export class NotificationService {
 
   static donationReceived(donationName: string) {
     useNotificationsStore.getState().addNotification({
-      id: crypto.randomUUID(),
+      id: "crypto.randomUUID()",
 
       title: "Doação recebida ✅",
 
@@ -55,7 +55,7 @@ export class NotificationService {
 
   static donationCancelled(donationName: string) {
     useNotificationsStore.getState().addNotification({
-      id: crypto.randomUUID(),
+      id: "crypto.randomUUID()",
 
       title: "Doação cancelada ⚠️",
 

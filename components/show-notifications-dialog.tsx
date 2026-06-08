@@ -140,7 +140,7 @@ export const ShowNotificationsDialog: React.FC<
             </View>
 
             {/* AÇÕES DE TESTE */}
-            {__DEV__ && (
+            {/* {__DEV__ && (
               <View className="mt-4 gap-2">
                 <Pressable
                   className="rounded-xl bg-[#1F2937] p-3"
@@ -176,16 +176,16 @@ export const ShowNotificationsDialog: React.FC<
                   </Text>
                 </Pressable>
               </View>
-            )}
+            )} */}
 
             {/* LISTA */}
             <ScrollView
               className="mt-5 max-h-[300px]"
               showsVerticalScrollIndicator={false}
             >
-              {notifications.map((item) => (
+              {notifications.map((item, index) => (
                 <Pressable
-                  key={item.id}
+                  key={index}
                   onPress={() => markAsRead(item.id)}
                   className={`mb-3 rounded-xl border p-4 ${
                     item.isRead ? "border-[#1F2937]" : "border-[#65C90F]"

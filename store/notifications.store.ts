@@ -104,7 +104,7 @@ export const useNotificationsStore = create<NotificationStore>()(
         set((state) => ({
           notifications: [
             {
-              id: crypto.randomUUID(),
+              id: "crypto.randomUUID()",
               title: "Nova doação disponível 🍎",
               description: `${donorName} cadastrou uma nova doação.`,
               donationId,
@@ -120,7 +120,7 @@ export const useNotificationsStore = create<NotificationStore>()(
         set((state) => ({
           notifications: [
             {
-              id: crypto.randomUUID(),
+              id: "crypto.randomUUID()",
               title: "Solicitação aceita 🎉",
               description: `Sua solicitação para ${donationName} foi aceita.`,
               type: NotificationType.DONATION_ACCEPTED,
@@ -135,7 +135,7 @@ export const useNotificationsStore = create<NotificationStore>()(
         set((state) => ({
           notifications: [
             {
-              id: crypto.randomUUID(),
+              id: "crypto.randomUUID()",
               title: "Doação recebida ✅",
               description: `Você recebeu ${donationName}.`,
               type: NotificationType.DONATION_RECEIVED,
@@ -149,7 +149,7 @@ export const useNotificationsStore = create<NotificationStore>()(
         set((state) => ({
           notifications: [
             {
-              id: crypto.randomUUID(),
+              id: "crypto.randomUUID()",
               title: "Nova doação por perto 🍎",
               description: `${donationTitle} disponível a ${distance} de você.`,
               donationId,
@@ -164,7 +164,7 @@ export const useNotificationsStore = create<NotificationStore>()(
         set((state) => ({
           notifications: [
             {
-              id: crypto.randomUUID(),
+              id: "crypto.randomUUID()",
               title: "Doação cancelada ⚠️",
               description: `${donationName} foi cancelada.`,
               type: NotificationType.DONATION_CANCELLED,
