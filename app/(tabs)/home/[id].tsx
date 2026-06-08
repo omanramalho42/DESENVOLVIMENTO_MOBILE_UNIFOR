@@ -1,3 +1,4 @@
+import NotificacoesButton from "@/components/_notificacoes";
 import { Box, HStack, Text, VStack } from "@/components/ui";
 import useAuth from "@/hooks/_useAuth";
 import {
@@ -252,6 +253,7 @@ export default function DonationDetailScreen() {
         <Text className="text-white text-lg font-bold flex-1" numberOfLines={1}>
           {donation?.tipoAlimento ?? "Doação"}
         </Text>
+        <NotificacoesButton />
       </HStack>
 
       {!donation ? (

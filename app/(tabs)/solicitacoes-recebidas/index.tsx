@@ -1,9 +1,11 @@
+import NotificacoesButton from "@/components/_notificacoes";
 import { absoluteFill } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
 import {
   aceitarSolicitacao,
   buscarSolicitacoesRecebidasDoDoador,
   db,
+  marcarEntregaDoador,
   recusarSolicitacao,
 } from "@/services";
 import { useLoading } from "@/store";
@@ -41,6 +43,7 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: "Todas", value: "todas" },
   { label: "Em análise", value: "em_analise" },
   { label: "Aprovada", value: "aprovada" },
+  { label: "Concluída", value: "concluida" },
   { label: "Rejeitada", value: "rejeitada" },
 ];
 
@@ -68,11 +71,23 @@ const statusBadge: Record<
     color: "#7DE11B",
     icon: "check-decagram",
   },
+  concluida: {
+    label: "Concluída",
+    bg: "rgba(34,197,94,0.12)",
+    color: "#4ADE80",
+    icon: "check-circle",
+  },
   rejeitada: {
     label: "Rejeitada",
     bg: "rgba(248,113,113,0.12)",
     color: "#F87171",
     icon: "close-circle-outline",
+  },
+  concluida: {
+    label: "Concluída",
+    bg: "rgba(34,197,94,0.12)",
+    color: "#4ADE80",
+    icon: "check-circle",
   },
 };
 
@@ -161,17 +176,20 @@ type SolicitacaoCardProps = {
   item: SolicitacaoEnriquecida;
   onAceitar: (item: SolicitacaoEnriquecida) => void;
   onRecusar: (item: SolicitacaoEnriquecida) => void;
+  onConfirmarEntrega: (item: SolicitacaoEnriquecida) => void;
 };
 
 const normalizeStatus = (status: string): SolicitacaoStatus => {
   if (status === "aceita" || status === "aprovada") return "aprovada";
   if (status === "recusada" || status === "rejeitada") return "rejeitada";
+  if (status === "concluida" || status === "concluída") return "concluida";
   return "em_analise";
 };
 
-const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) => {
+const SolicitacaoCard = ({ item, onAceitar, onRecusar, onConfirmarEntrega }: SolicitacaoCardProps) => {
   const normalizedStatus = normalizeStatus(item.status);
   const badge = statusBadge[normalizedStatus];
+  const podeConfirmarEntrega = normalizedStatus === "aprovada" && item.coletadoPeloReceptor && !item.coletadoPeloDoador;
 
   return (
     <View className="mb-4 overflow-hidden rounded-[22px] border border-white/5 bg-[#101514]">
@@ -255,12 +273,42 @@ const SolicitacaoCard = ({ item, onAceitar, onRecusar }: SolicitacaoCardProps) =
               </LinearGradient>
             </Pressable>
           </View>
+        ) : podeConfirmarEntrega ? (
+          <View className="mt-4 mb-4">
+            <Pressable
+              onPress={() => onConfirmarEntrega(item)}
+              className="flex-1 overflow-hidden rounded-[14px]"
+              style={{ height: 44 }}
+            >
+              <LinearGradient
+                colors={["#7DE11B", "#58B50B"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 14,
+                }}
+              >
+                <Feather name="check" size={16} color="#081106" />
+                <Text className="ml-2 text-[14px] font-semibold text-[#081106]">
+                  Confirmar entrega
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
         ) : (
           <View className="mt-4 mb-4 flex-row items-center justify-between rounded-[14px] border border-white/5 bg-[#0D120F] px-4 py-3">
             <View className="flex-row items-center">
               <MaterialCommunityIcons name={badge.icon as any} size={16} color={badge.color} />
               <Text className="ml-2 text-[13px] font-medium" style={{ color: badge.color }}>
-                {normalizedStatus === "aprovada" ? "Solicitação aceita" : "Solicitação recusada"}
+                {normalizedStatus === "aprovada"
+                  ? "Solicitação aceita"
+                  : normalizedStatus === "concluida"
+                    ? "Doação concluída"
+                    : "Solicitação recusada"}
               </Text>
             </View>
             {item.motivoRecusa ? (
@@ -361,6 +409,31 @@ export default function SolicitacoesRecebidasScreen() {
     setModalRecusaVisible(true);
   };
 
+  const handleConfirmarEntrega = (item: SolicitacaoComId) => {
+    Alert.alert(
+      "Confirmar entrega",
+      "Você confirma que entregou esta doação?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Confirmar",
+          onPress: async () => {
+            try {
+              setProcessando(true);
+              await marcarEntregaDoador(item.id);
+              await carregarDados();
+              Alert.alert("Sucesso", "Entrega confirmada! Doação concluída.");
+            } catch (err: any) {
+              Alert.alert("Erro", err?.message || "Não foi possível confirmar a entrega.");
+            } finally {
+              setProcessando(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const confirmarRecusa = async () => {
     if (!solicitacaoSelecionada || !motivoSelecionado) {
       Alert.alert("Atenção", "Selecione um motivo para recusar.");
@@ -403,6 +476,7 @@ export default function SolicitacoesRecebidasScreen() {
   const totals = useMemo(() => ({
     em_analise: solicitacoes.filter((s) => normalizeStatus(s.status) === "em_analise").length,
     aprovadas: solicitacoes.filter((s) => normalizeStatus(s.status) === "aprovada").length,
+    concluidas: solicitacoes.filter((s) => normalizeStatus(s.status) === "concluida").length,
     rejeitadas: solicitacoes.filter((s) => normalizeStatus(s.status) === "rejeitada").length,
   }), [solicitacoes]);
 
@@ -420,13 +494,12 @@ export default function SolicitacoesRecebidasScreen() {
 
       <View className="px-5 pt-3">
         <View className="mb-5 flex-row items-center justify-between">
-          <View className="h-10 w-10" />
-          <Text className="text-[18px] font-semibold text-white">
-            Solicitações recebidas
-          </Text>
-          <Pressable onPress={carregarDados} hitSlop={12} className="h-10 w-10 items-center justify-center">
-            <Feather name="refresh-cw" size={18} color="#A3A3A3" />
-          </Pressable>
+          <View className="flex-row items-center">
+            <Text className="text-[18px] font-semibold text-white">
+              Solicitações recebidas
+            </Text>
+          </View>
+          <NotificacoesButton />
         </View>
       </View>
 
@@ -453,6 +526,10 @@ export default function SolicitacoesRecebidasScreen() {
                 <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
                   <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#7DE11B]">Aprovadas</Text>
                   <Text className="mt-1 text-[22px] font-semibold text-white">{totals.aprovadas}</Text>
+                </View>
+                <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
+                  <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#4ADE80]">Concluídas</Text>
+                  <Text className="mt-1 text-[22px] font-semibold text-white">{totals.concluidas}</Text>
                 </View>
                 <View className="flex-1 rounded-[18px] border border-white/5 bg-[#101514] px-4 py-3">
                   <Text className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#F87171]">Rejeitadas</Text>
@@ -504,6 +581,7 @@ export default function SolicitacoesRecebidasScreen() {
                       item={item}
                       onAceitar={handleAceitar}
                       onRecusar={handleRecusar}
+                      onConfirmarEntrega={handleConfirmarEntrega}
                     />
                   ))}
                 </>

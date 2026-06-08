@@ -1,5 +1,10 @@
+import NotificacoesButton from "@/components/_notificacoes";
 import useAuth from "@/hooks/_useAuth";
-import { db } from "@/services";
+import {
+  db,
+  marcarColetaReceptor,
+  marcarEntregaDoador,
+} from "@/services";
 import { useLoading, useUser } from "@/store";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
@@ -13,7 +18,9 @@ import {
 } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -27,6 +34,7 @@ type AbaHistorico = "doador" | "receptor";
 
 type DonationHistory = {
   id: string;
+  solicitacaoId?: string;
   tipoAlimento?: string;
   categoria?: string;
   quantidade?: string;
@@ -41,6 +49,8 @@ type DonationHistory = {
   status?: string;
   donorId?: string;
   reivindicadoPor?: string;
+  coletadoPeloReceptor?: boolean;
+  coletadoPeloDoador?: boolean;
   fotos?: any[];
   createdAt?: any;
 };
@@ -51,6 +61,7 @@ const filtrosDoador = [
   { label: "Todos", value: "todos" },
   { label: "Em análise", value: "em_analise" },
   { label: "Aprovado", value: "aprovado" },
+  { label: "Concluído", value: "concluido" },
   { label: "Rejeitado", value: "rejeitado" },
   { label: "Cancelado", value: "cancelado" },
   { label: "Disponível", value: "disponivel" },
@@ -60,6 +71,7 @@ const filtrosReceptor = [
   { label: "Todos", value: "todos" },
   { label: "Em análise", value: "em_analise" },
   { label: "Aprovado", value: "aprovado" },
+  { label: "Concluído", value: "concluido" },
   { label: "Rejeitado", value: "rejeitado" },
   { label: "Cancelado", value: "cancelado" },
 ];
@@ -87,6 +99,10 @@ const normalizarStatus = (status?: string) => {
     return "disponivel";
   }
 
+  if (["concluido", "concluído", "concluida", "concluída"].includes(value)) {
+    return "concluido";
+  }
+
   return value || "em_analise";
 };
 
@@ -96,6 +112,7 @@ const statusLabel = (status?: string) => {
   const labels: Record<string, string> = {
     em_analise: "Em análise",
     aprovado: "Aprovado",
+    concluido: "Concluído",
     rejeitado: "Rejeitado",
     cancelado: "Cancelado",
     disponivel: "Disponível",
@@ -133,6 +150,11 @@ const statusStyle = (status?: string) => {
       text: "#60A5FA",
       icon: "gift-outline",
     },
+    concluido: {
+      bg: "rgba(34, 197, 94, 0.13)",
+      text: "#4ADE80",
+      icon: "check-circle",
+    },
   };
 
   return styles[value] ?? styles.em_analise;
@@ -164,6 +186,69 @@ export default function HistoricoDoacoes() {
 
   const filtros = aba === "doador" ? filtrosDoador : filtrosReceptor;
 
+  const [modalItem, setModalItem] = useState<DonationHistory | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [processandoAcao, setProcessandoAcao] = useState(false);
+
+  const abrirModal = (item: DonationHistory) => {
+    setModalItem(item);
+    setModalVisible(true);
+  };
+
+  const handleMarcarColetaReceptor = async (item: DonationHistory) => {
+    if (!item.solicitacaoId) return;
+    Alert.alert(
+      "Confirmar coleta",
+      "Você confirma que já coletou esta doação?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Confirmar",
+          onPress: async () => {
+            try {
+              setProcessandoAcao(true);
+              await marcarColetaReceptor(item.solicitacaoId!);
+              await carregarHistorico();
+              setModalVisible(false);
+              Alert.alert("Sucesso", "Coleta confirmada! Aguardando confirmação do doador.");
+            } catch {
+              Alert.alert("Erro", "Não foi possível confirmar a coleta.");
+            } finally {
+              setProcessandoAcao(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleConfirmarEntregaDoador = async (item: DonationHistory) => {
+    if (!item.solicitacaoId) return;
+    Alert.alert(
+      "Confirmar entrega",
+      "Você confirma que entregou esta doação?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Confirmar",
+          onPress: async () => {
+            try {
+              setProcessandoAcao(true);
+              await marcarEntregaDoador(item.solicitacaoId!);
+              await carregarHistorico();
+              setModalVisible(false);
+              Alert.alert("Sucesso", "Entrega confirmada! Doação concluída.");
+            } catch (err: any) {
+              Alert.alert("Erro", err?.message || "Não foi possível confirmar a entrega.");
+            } finally {
+              setProcessandoAcao(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const carregarHistorico = useCallback(async () => {
     if (!user?.uid || !db) {
       setDoacoesDoador([]);
@@ -183,14 +268,22 @@ export default function HistoricoDoacoes() {
           getDocs(query(solicitacoesRef, where("solicitanteId", "==", user.uid))),
         ]);
 
-      // mapa doacaoId → status mais recente da solicitação
-      const solicitacaoStatusMap = new Map<string, string>();
+      // mapa doacaoId → dados mais recentes da solicitação
+      const solicitacaoMap = new Map<
+        string,
+        { status: string; id: string; coletadoPeloReceptor?: boolean; coletadoPeloDoador?: boolean }
+      >();
       doadorSolicitacoesSnap.docs.forEach((docItem) => {
         const data = docItem.data();
-        const existing = solicitacaoStatusMap.get(data.doacaoId);
+        const existing = solicitacaoMap.get(data.doacaoId);
         // prefere status ativo (pendente/aprovada) sobre rejeitada
         if (!existing || data.status !== "rejeitada") {
-          solicitacaoStatusMap.set(data.doacaoId, data.status);
+          solicitacaoMap.set(data.doacaoId, {
+            status: data.status,
+            id: docItem.id,
+            coletadoPeloReceptor: data.coletadoPeloReceptor,
+            coletadoPeloDoador: data.coletadoPeloDoador,
+          });
         }
       });
 
@@ -199,11 +292,17 @@ export default function HistoricoDoacoes() {
 
       // aba doador: todas as doações + status real da solicitação
       const doadorHistory: DonationHistory[] = doadorDonationsSnap.docs
-        .map((docItem) => ({
-          id: docItem.id,
-          ...(docItem.data() as Omit<DonationHistory, "id">),
-          status: solicitacaoStatusMap.get(docItem.id) ?? docItem.data().status,
-        }))
+        .map((docItem) => {
+          const sol = solicitacaoMap.get(docItem.id);
+          return {
+            id: docItem.id,
+            ...(docItem.data() as Omit<DonationHistory, "id">),
+            solicitacaoId: sol?.id,
+            status: sol?.status ?? docItem.data().status,
+            coletadoPeloReceptor: sol?.coletadoPeloReceptor,
+            coletadoPeloDoador: sol?.coletadoPeloDoador,
+          };
+        })
         .sort(sortByDate);
 
       // aba receptor: solicitações feitas pelo usuário + dados completos da doação
@@ -217,7 +316,8 @@ export default function HistoricoDoacoes() {
             const doacao = doacaoSnap?.exists() ? doacaoSnap.data() : null;
 
             return {
-              id: docItem.id,
+              id: doacaoSnap?.exists() ? doacaoSnap.id : docItem.id,
+              solicitacaoId: docItem.id,
               tipoAlimento: doacao?.tipoAlimento ?? sol.doacaoTitulo,
               categoria: doacao?.categoria ?? sol.doacaoCategoria,
               quantidade: doacao?.quantidade ?? sol.doacaoQuantidade,
@@ -229,6 +329,8 @@ export default function HistoricoDoacoes() {
               tipoRetirada: doacao?.tipoRetirada,
               fotos: doacao?.fotos,
               status: sol.status,
+              coletadoPeloReceptor: sol.coletadoPeloReceptor,
+              coletadoPeloDoador: sol.coletadoPeloDoador,
               createdAt: sol.criadoEm,
             } as DonationHistory;
           }),
@@ -278,14 +380,16 @@ export default function HistoricoDoacoes() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
        <View className="px-5 pt-4">
-       <View className="mb-6">
-        <Text className="text-white text-[28px] font-bold">
-          Histórico
-        </Text>
-
-        <Text className="text-[#A3A3A3] mt-1">
-          Acompanhe suas doações realizadas e recebidas.
-        </Text>
+       <View className="mb-6 flex-row items-center justify-between">
+        <View>
+          <Text className="text-white text-[28px] font-bold">
+            Histórico
+          </Text>
+          <Text className="text-[#A3A3A3] mt-1">
+            Acompanhe suas doações realizadas e recebidas.
+          </Text>
+        </View>
+        <NotificacoesButton />
       </View>
 
           <View className="flex-row bg-[#101514] border border-white/10 rounded-2xl p-1 mb-5">
@@ -421,22 +525,167 @@ export default function HistoricoDoacoes() {
           ) : (
             <View className="gap-4">
               {doacoesFiltradas.map((item) => (
-                <HistoricoCard key={item.id} item={item} />
+                <HistoricoCard key={item.id} item={item} onPress={() => abrirModal(item)} />
               ))}
             </View>
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/60 px-4 pb-6">
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setModalVisible(false)}
+          />
+          {modalItem && (
+            <View className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111615] px-5 pb-5 pt-5 max-h-[85%]">
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View className="flex-row items-center justify-between mb-4">
+                  <Text className="text-[18px] font-semibold text-white flex-1 pr-2">
+                    {modalItem.tipoAlimento || "Doação de alimento"}
+                  </Text>
+                  <View
+                    className="px-3 py-1 rounded-full flex-row items-center"
+                    style={{ backgroundColor: statusStyle(modalItem.status).bg }}
+                  >
+                    <MaterialCommunityIcons
+                      name={statusStyle(modalItem.status).icon as any}
+                      size={14}
+                      color={statusStyle(modalItem.status).text}
+                    />
+                    <Text
+                      className="text-[12px] font-semibold ml-1"
+                      style={{ color: statusStyle(modalItem.status).text }}
+                    >
+                      {statusLabel(modalItem.status)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="rounded-[18px] overflow-hidden bg-[#182018] border border-white/10 mb-4">
+                  {getImagem(modalItem.fotos) ? (
+                    <Image
+                      source={{ uri: getImagem(modalItem.fotos)! }}
+                      className="w-full h-40"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-full h-40 items-center justify-center">
+                      <MaterialCommunityIcons
+                        name="food-apple-outline"
+                        size={48}
+                        color={GREEN}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <View className="gap-3 mb-5">
+                  <InfoLine
+                    icon="tag-outline"
+                    text={modalItem.categoria || "Categoria não informada"}
+                  />
+                  <InfoLine
+                    icon="weight-kilogram"
+                    text={modalItem.quantidade || "Quantidade não informada"}
+                  />
+                  <InfoLine
+                    icon="calendar-outline"
+                    text={modalItem.validade || "Validade não informada"}
+                  />
+                  <InfoLine
+                    icon="map-marker-outline"
+                    text={modalItem.localizacao || "Local não informado"}
+                  />
+                  <InfoLine
+                    icon="clock-outline"
+                    text={
+                      modalItem.dataRetirada
+                        ? `${modalItem.dataRetirada} ${modalItem.horarioInicio ? `(${modalItem.horarioInicio} - ${modalItem.horarioFim})` : ""}`
+                        : "Data não informada"
+                    }
+                  />
+                  <InfoLine
+                    icon="truck-delivery-outline"
+                    text={
+                      modalItem.tipoRetirada === "doador"
+                        ? "Entrega pelo doador"
+                        : modalItem.tipoRetirada === "buscador"
+                          ? "Retirada pelo receptor"
+                          : "Tipo de retirada não informado"
+                    }
+                  />
+                  {modalItem.descricao ? (
+                    <InfoLine
+                      icon="text-box-outline"
+                      text={modalItem.descricao}
+                    />
+                  ) : null}
+                </View>
+
+                {aba === "receptor" &&
+                  normalizarStatus(modalItem.status) === "aprovado" && (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      disabled={processandoAcao}
+                      onPress={() => handleMarcarColetaReceptor(modalItem)}
+                      className="bg-[#65C90F] rounded-[18px] h-14 items-center justify-center mb-3"
+                    >
+                      <Text className="text-[#081106] text-[15px] font-semibold">
+                        {processandoAcao
+                          ? "Processando..."
+                          : "Marcar como coletado"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                {normalizarStatus(modalItem.status) === "concluido" && (
+                  <View className="rounded-[14px] border border-white/5 bg-[#0D120F] px-4 py-3 mb-3">
+                    <Text className="text-[13px] text-[#4ADE80] text-center">
+                      Doação concluída com sucesso!
+                    </Text>
+                  </View>
+                )}
+
+                <Pressable
+                  onPress={() => setModalVisible(false)}
+                  className="h-12 items-center justify-center"
+                >
+                  <Text className="text-[15px] text-[#A3A3A3]">Fechar</Text>
+                </Pressable>
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
  );
 }
 
-function HistoricoCard({ item }: { item: DonationHistory }) {
+function HistoricoCard({
+  item,
+  onPress,
+  aba,
+}: {
+  item: DonationHistory;
+  onPress: () => void;
+  aba: AbaHistorico;
+}) {
   const imagem = getImagem(item.fotos);
   const status = statusStyle(item.status);
 
   return (
-    <View className="rounded-[26px] border border-white/10 bg-[#101514] overflow-hidden">
+    <Pressable
+      onPress={onPress}
+      className="rounded-[26px] border border-white/10 bg-[#101514] overflow-hidden"
+      android_ripple={{ color: "rgba(255,255,255,0.05)" }}
+    >
       <View className="flex-row p-4">
         <View className="w-[96px] h-[96px] rounded-[22px] overflow-hidden bg-[#182018] border border-white/10">
           {imagem ? (
@@ -523,7 +772,7 @@ function HistoricoCard({ item }: { item: DonationHistory }) {
           color="#A3A3A3"
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
 

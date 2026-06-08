@@ -1,10 +1,16 @@
 import { absoluteFill, menuItems } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
-import { auth, buscarImpactoUsuario, db, ImpactoUsuario, storage } from "@/services";
+import NotificacoesButton from "@/components/_notificacoes";
+import {
+  auth,
+  buscarImpactoUsuario,
+  db,
+  ImpactoUsuario,
+  storage,
+} from "@/services";
 import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -365,7 +371,6 @@ const ProfileScreen = () => {
     router.push(route as any);
   };
 
-
   if (error && !displayProfile) {
     return (
       <SafeAreaView className="flex-1 justify-center bg-[#050807] px-5">
@@ -430,17 +435,7 @@ const ProfileScreen = () => {
             <Text className="text-[28px] font-semibold leading-[34px] tracking-[-0.4px] text-white">
               Meu perfil
             </Text>
-            <View className="flex-row items-center gap-4">
-              <Pressable className="h-10 w-10 items-center justify-center">
-                <Feather name="settings" size={23} color="#FFFFFF" />
-              </Pressable>
-              <View>
-                <Pressable className="h-10 w-10 items-center justify-center">
-                  <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
-                </Pressable>
-                <View className="absolute right-[5px] top-[7px] h-[8px] w-[8px] rounded-full border border-black bg-[#65C90F]" />
-              </View>
-            </View>
+            <NotificacoesButton />
           </View>
 
           {syncWarning ? (
@@ -542,41 +537,43 @@ const ProfileScreen = () => {
             </Pressable>
           ) : null}
 
-          <View className="mb-6 overflow-hidden rounded-[24px] border border-[#2B4F17] bg-[#101A0F] px-4 py-4">
-            <LinearGradient
-              colors={["rgba(101,201,15,0.09)", "rgba(16,26,15,0.92)", "rgba(8,14,9,0.97)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={absoluteFill}
-            />
-            <View className="relative">
-              <Text className="ml-1 text-[16px] font-semibold text-white">Meu impacto</Text>
-              <Text className="ml-1 mt-1 text-[13px] text-[#B3B3B3]">
-                Juntos, transformamos vidas!
-              </Text>
+          {displayProfile.tipoUsuario === "Doador" && (
+            <View className="mb-6 overflow-hidden rounded-[24px] border border-[#2B4F17] bg-[#101A0F] px-4 py-4">
+              <LinearGradient
+                colors={["rgba(101,201,15,0.09)", "rgba(16,26,15,0.92)", "rgba(8,14,9,0.97)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={absoluteFill}
+              />
+              <View className="relative">
+                <Text className="ml-1 text-[16px] font-semibold text-white">Meu impacto</Text>
+                <Text className="ml-1 mt-1 text-[13px] text-[#B3B3B3]">
+                  Juntos, transformamos vidas!
+                </Text>
 
-              <View className="mt-5 flex-row items-stretch px-1">
-                {[
-                { icon: "gift-outline" as const, value: String(impacto.doacoes), label: "doações feitas" },
-                { icon: "leaf" as const, value: `${impacto.totalKg % 1 === 0 ? impacto.totalKg : impacto.totalKg.toFixed(1)} kg`, label: "alimentos doados" },
-                { icon: "account-group-outline" as const, value: String(impacto.pessoasAjudadas), label: "pessoas ajudadas" },
-              ].map((item, index, arr) => (
-                  <View key={item.label} className="flex-1 items-center px-1">
-                    <View className="mb-3 h-[48px] w-[48px] items-center justify-center rounded-full border border-[#2B5718] bg-[#19340E]">
-                      <MaterialCommunityIcons name={item.icon} size={22} color="#65C90F" />
+                <View className="mt-5 flex-row items-stretch px-1">
+                  {[
+                  { icon: "gift-outline" as const, value: String(impacto.doacoes), label: "doações feitas" },
+                  { icon: "leaf" as const, value: `${impacto.totalKg % 1 === 0 ? impacto.totalKg : impacto.totalKg.toFixed(1)} kg`, label: "alimentos doados" },
+                  { icon: "account-group-outline" as const, value: String(impacto.pessoasAjudadas), label: "pessoas ajudadas" },
+                ].map((item, index, arr) => (
+                    <View key={item.label} className="flex-1 items-center px-1">
+                      <View className="mb-3 h-[48px] w-[48px] items-center justify-center rounded-full border border-[#2B5718] bg-[#19340E]">
+                        <MaterialCommunityIcons name={item.icon} size={22} color="#65C90F" />
+                      </View>
+                      <Text className="text-[21px] font-semibold text-white">{item.value}</Text>
+                      <Text className="mt-[2px] max-w-[80px] text-center text-[12px] leading-[15px] text-[#A3A3A3]">
+                        {item.label}
+                      </Text>
+                      {index < arr.length - 1 ? (
+                        <View className="absolute right-0 top-2 bottom-2 w-[1px] bg-white/10" />
+                      ) : null}
                     </View>
-                    <Text className="text-[21px] font-semibold text-white">{item.value}</Text>
-                    <Text className="mt-[2px] max-w-[80px] text-center text-[12px] leading-[15px] text-[#A3A3A3]">
-                      {item.label}
-                    </Text>
-                    {index < arr.length - 1 ? (
-                      <View className="absolute right-0 top-2 bottom-2 w-[1px] bg-white/10" />
-                    ) : null}
-                  </View>
-                ))}
+                  ))}
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           <View className="mb-6 overflow-hidden rounded-[24px] border border-white/5 bg-[#101514]">
             {menuItems.map((item, index) => (
@@ -760,6 +757,7 @@ const ProfileScreen = () => {
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 };

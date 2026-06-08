@@ -1,3 +1,4 @@
+import NotificacoesButton from "@/components/_notificacoes";
 import useAuth from "@/hooks/_useAuth";
 import {
   CloudinaryServiceError,
@@ -298,17 +299,14 @@ export default function DoarScreen() {
           contentContainerStyle={{ paddingBottom: 130 }}
         >
           <View className="px-5 pt-5">
-            <View className="flex-row items-center justify-between mb-5">
+            <View className="flex-row items-start justify-between mb-5">
               <View>
                 <Text className="text-white text-3xl font-bold">Cadastrar doação</Text>
                 <Text className="text-[#A3A3A3] text-[14px] mt-1">
                   Preencha as informações sobre o alimento.
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <MaterialCommunityIcons name="shield-check-outline" size={18} color={GREEN} />
-                <Text className="text-[#A3A3A3] text-[13px] ml-1">Ambiente seguro</Text>
-              </View>
+              <NotificacoesButton />
             </View>
 
             <Section title="Fotos do alimento" subtitle="Adicione fotos reais do alimento">
@@ -396,14 +394,14 @@ export default function DoarScreen() {
                 <OptionCard
                   active={retirada === "doador"}
                   icon="account-group-outline"
-                  title="Retirada pelo doador"
+                  title="Entrega"
                   subtitle="Eu levo até o local"
                   onPress={() => setRetirada("doador")}
                 />
                 <OptionCard
                   active={retirada === "buscador"}
                   icon="car-outline"
-                  title="Buscador retira"
+                  title="Retirada"
                   subtitle="O buscador vem até mim"
                   onPress={() => setRetirada("buscador")}
                 />
@@ -512,18 +510,24 @@ export default function DoarScreen() {
 
               {/* Checkbox de termos */}
               <TouchableOpacity
-                onPress={() => setAceitouTermos((atual) => !atual)}
+                onPress={() => setModalTermosVisivel(true)}
                 className="flex-row items-center justify-between bg-[#111827] border border-[#1F2937] rounded-2xl px-4 py-4"
               >
                 <View className="flex-row items-center flex-1">
-                  <View className={`w-7 h-7 rounded-lg items-center justify-center mr-3 ${aceitouTermos ? "bg-[#65C90F]" : "bg-[#0B0F0C]"}`}>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setAceitouTermos((atual) => !atual);
+                    }}
+                    className={`w-7 h-7 rounded-lg items-center justify-center mr-3 ${aceitouTermos ? "bg-[#65C90F]" : "bg-[#0B0F0C]"}`}
+                  >
                     {aceitouTermos && (
                       <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
                     )}
-                  </View>
+                  </Pressable>
                   <Text className="text-[#D4D4D4] flex-1">
                     Aceito os{" "}
-                    <Text className="text-[#65C90F] font-semibold" onPress={() => setModalTermosVisivel(true)}>
+                    <Text className="text-[#65C90F] font-semibold">
                       termos e condições
                     </Text>{" "}
                     da plataforma

@@ -1,4 +1,5 @@
 import { AceiteTermo } from "@/components";
+import NotificacoesButton from "@/components/_notificacoes";
 import { TERMO_DOADOR } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
 import { FirestoreServiceError, salvarDoador } from "@/services";
@@ -136,12 +137,17 @@ export default function BecomeDonor() {
               >
                 <MaterialCommunityIcons name="leaf" size={38} color="#65C90F" />
               </View>
-              <Text
-                className="text-white text-center text-[28px] font-semibold"
-                style={{ letterSpacing: -0.4 }}
-              >
-                Tornar-se Doador
-              </Text>
+              <View className="flex-row items-center justify-center">
+                <Text
+                  className="text-white text-center text-[28px] font-semibold"
+                  style={{ letterSpacing: -0.4 }}
+                >
+                  Tornar-se Doador
+                </Text>
+                <View className="ml-2">
+                  <NotificacoesButton />
+                </View>
+              </View>
               <Text className="mt-2 text-center text-[15px] text-[#A3A3A3]">
                 Preencha seus dados para começar a doar
               </Text>

@@ -11,22 +11,14 @@ config.resolver = {
     '@protobufjs/inquire': path.resolve(__dirname, 'shims/protobufjs-inquire.js'),
   },
   resolveRequest: (context, moduleName, platform) => {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    if (moduleName === 'framer-motion' && context.customResolverOptions?.environment === 'node') {
-      return { type: 'empty' };
-=======
-=======
->>>>>>> Stashed changes
     if (moduleName === 'tslib') {
       return {
         filePath: require.resolve('tslib/tslib.js'),
         type: 'sourceFile',
       };
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+    }
+    if (moduleName === 'framer-motion' && context.customResolverOptions?.environment === 'node') {
+      return { type: 'empty' };
     }
     return context.resolveRequest(context, moduleName, platform);
   },

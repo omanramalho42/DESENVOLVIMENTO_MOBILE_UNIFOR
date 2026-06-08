@@ -1,4 +1,5 @@
 import { DonationCard } from "@/components";
+import NotificacoesButton from "@/components/_notificacoes";
 import { Box, Button, ButtonText, HStack, Text } from "@/components/ui";
 import { listarDoacoes } from "@/services";
 import { useLoading } from "@/store";
@@ -513,10 +514,10 @@ export default function Home() {
       <Box className="flex-1 bg-[#09090B] pt-12 px-4">
         {/* Header */}
         <HStack className="flex-row items-center justify-between mb-6">
-          <Text className="text-white text-2xl font-bold">Doações</Text>
-          <Box className="bg-[#1E3A0A] w-10 h-10 rounded-full items-center justify-center">
-            <FontAwesome5 name="seedling" size={16} color="#84CC16" />
-          </Box>
+          <View className="flex-row items-center">
+            <Text className="text-white text-2xl font-bold">Doações</Text>
+          </View>
+          <NotificacoesButton />
         </HStack>
 
         {/* Search */}

@@ -121,12 +121,21 @@ export type PickupScheduleDocument = {
   criadoEm: unknown;
 };
 
+export type TipoNotificacao =
+  | "reivindicacao"
+  | "aprovada"
+  | "rejeitada"
+  | "cancelada"
+  | "concluida";
+
 export type AppNotificationDocument = {
   userId: string;
-  tipo: string;
+  tipo: TipoNotificacao;
   titulo: string;
   mensagem: string;
-  referenciaId: string;
+  doacaoId?: string;
+  solicitacaoId?: string;
+  motivoRecusa?: string | null;
   lida: boolean;
   criadoEm: unknown;
 };
@@ -153,7 +162,7 @@ export type ParsedCloudinaryResponse = {
   rawText: string;
 };
 
-export type SolicitacaoStatus = "em_analise" | "aprovada" | "rejeitada";
+export type SolicitacaoStatus = "em_analise" | "aprovada" | "rejeitada" | "concluida";
 
 export type MotivoRecusa =
   | "Alimento venceu"
@@ -175,6 +184,8 @@ export type Solicitacao = {
   doacaoCategoria: string;
   status: SolicitacaoStatus;
   motivoRecusa?: MotivoRecusa | null;
+  coletadoPeloReceptor?: boolean;
+  coletadoPeloDoador?: boolean;
   criadoEm: unknown;
   atualizadoEm?: unknown;
 };

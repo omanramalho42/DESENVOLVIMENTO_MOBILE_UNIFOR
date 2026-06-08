@@ -209,6 +209,7 @@ export const solicitarDoacao = async (
   }
 
   const donationRef = doc(db, "donations", donationId);
+  const solicitacaoRef = doc(collection(db!, "solicitacoes"));
 
   await runTransaction(db, async (transaction) => {
     const donationSnap = await transaction.get(donationRef);
@@ -229,7 +230,6 @@ export const solicitarDoacao = async (
       status: "indisponivel"
     });
 
-    const solicitacaoRef = doc(collection(db!, "solicitacoes"));
     transaction.set(solicitacaoRef, {
       doacaoId: donationId,
       doadorId: dadosDoacao.doadorId,
@@ -244,6 +244,16 @@ export const solicitarDoacao = async (
       atualizadoEm: serverTimestamp(),
     });
   });
+
+  // notificar o doador fora da transaction
+  const { criarNotificacaoReivindicacao } = await import("@/services/_notificacoes");
+  await criarNotificacaoReivindicacao(
+    dadosDoacao.doadorId,
+    dadosDoacao.solicitanteNome,
+    dadosDoacao.titulo,
+    donationId,
+    solicitacaoRef.id
+  );
 };
 
 export const buscarDoacao = async (
@@ -306,11 +316,26 @@ export const buscarPerfilUsuario = async (
 };
 
 const parseKg = (quantidade: string): number => {
-  const normalized = quantidade.toLowerCase().replace(",", ".");
-  const kgMatch = normalized.match(/([\d.]+)\s*kg/);
+  const normalized = quantidade.toLowerCase().replace(",", ".").replace(/\s+/g, " ");
+
+  // tenta capturar número seguido de kg/quilo/quilos
+  const kgMatch = normalized.match(/([\d.]+)\s*(?:kg|quilos?|quilo)/);
   if (kgMatch) return parseFloat(kgMatch[1]);
-  const gMatch = normalized.match(/([\d.]+)\s*g/);
+
+  // tenta capturar número seguido de g/grama/gramas
+  const gMatch = normalized.match(/([\d.]+)\s*(?:g|gramas?|grama)/);
   if (gMatch) return parseFloat(gMatch[1]) / 1000;
+
+  // se não achou unidade, tenta pegar o primeiro número da string
+  const numberMatch = normalized.match(/([\d.]+)/);
+  if (numberMatch) {
+    const value = parseFloat(numberMatch[1]);
+    // se for um número muito pequeno (ex: 50), provavelmente é gramas
+    if (value < 1 && value > 0) return value;
+    if (value >= 1 && value < 1000) return value; // provavelmente kg
+    if (value >= 1000) return value / 1000; // provavelmente gramas
+  }
+
   return 0;
 };
 
@@ -330,18 +355,25 @@ export const buscarImpactoUsuario = async (
   try {
     const q = query(
       collection(db, "solicitacoes"),
-      where("solicitanteId", "==", userId),
-      where("status", "==", "aprovada")
+      where("doadorId", "==", userId),
+      where("status", "==", "concluida")
     );
     const snapshot = await getDocs(q);
 
-    const doacoes = snapshot.docs.length;
+    // agrupa por doacaoId para não contar a mesma doação 2 vezes
+    const doacaoIds = new Set<string>();
+    const solicitantes = new Set<string>();
+    snapshot.docs.forEach((docSnap) => {
+      const data = docSnap.data() as { doacaoId?: string; solicitanteId?: string };
+      if (data.doacaoId) doacaoIds.add(data.doacaoId);
+      if (data.solicitanteId) solicitantes.add(data.solicitanteId);
+    });
+
+    const doacoes = doacaoIds.size;
 
     const quantidades = await Promise.all(
-      snapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data() as { doacaoId?: string };
-        if (!data.doacaoId) return 0;
-        const doacaoSnap = await getDoc(doc(db!, "donations", data.doacaoId));
+      Array.from(doacaoIds).map(async (doacaoId) => {
+        const doacaoSnap = await getDoc(doc(db!, "donations", doacaoId));
         if (!doacaoSnap.exists()) return 0;
         const doacao = doacaoSnap.data() as DonationDocument;
         return parseKg(doacao.quantidade);
@@ -349,7 +381,7 @@ export const buscarImpactoUsuario = async (
     );
 
     const totalKg = quantidades.reduce((acc, kg) => acc + kg, 0);
-    const pessoasAjudadas = Math.floor(totalKg / 2);
+    const pessoasAjudadas = solicitantes.size;
 
     return { doacoes, totalKg, pessoasAjudadas };
   } catch (error) {
