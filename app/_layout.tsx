@@ -1,9 +1,10 @@
-import "@/styles/global.css";
 import { LoadingProvider } from "@/components/_loading";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import useAuth from "@/hooks/_useAuth";
 import { verificarSeUsuarioEhDoador } from "@/services";
 import { useUser } from "@/store";
+import "@/styles/global.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Slot } from "expo-router";
 import { useEffect } from "react";
 
@@ -24,14 +25,18 @@ function UserProfileWatcher() {
   return null;
 }
 
+const queryClient = new QueryClient();
+
 const RootLayout = () => {
   return (
-    <GluestackUIProvider mode="dark">
-      <LoadingProvider>
-        <UserProfileWatcher />
-        <Slot />
-      </LoadingProvider>
-    </GluestackUIProvider>
+    <QueryClientProvider client={queryClient}>
+      <GluestackUIProvider mode="dark">
+        <LoadingProvider>
+          <UserProfileWatcher />
+          <Slot />
+        </LoadingProvider>
+      </GluestackUIProvider>
+    </QueryClientProvider>
   );
 };
 

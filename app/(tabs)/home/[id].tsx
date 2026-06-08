@@ -6,13 +6,14 @@ import {
   FirestoreServiceError,
   solicitarDoacao,
 } from "@/services";
+import { NotificationService } from "@/services/_notifications.service";
 import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import { formatarData, formatarHorario } from "@/utils";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -38,7 +39,7 @@ const toRadians = (value: number) => (value * Math.PI) / 180;
 
 const calculateDistanceMeters = (
   from: { latitude: number; longitude: number },
-  to: { latitude: number; longitude: number }
+  to: { latitude: number; longitude: number },
 ) => {
   const earthRadius = 6371000;
   const dLat = toRadians(to.latitude - from.latitude);
@@ -114,7 +115,8 @@ export default function DonationDetailScreen() {
   const { user } = useAuth();
 
   const { startLoading, stopLoading } = useLoading();
-  const [donation, setDonation] = useState<Awaited<ReturnType<typeof buscarDoacao>>>(null);
+  const [donation, setDonation] =
+    useState<Awaited<ReturnType<typeof buscarDoacao>>>(null);
   const [donorProfile, setDonorProfile] = useState<UserProfile | null>(null);
   const [loadingDonor, setLoadingDonor] = useState(false);
   const [dataAgendada, setDataAgendada] = useState("");
@@ -144,17 +146,30 @@ export default function DonationDetailScreen() {
           return;
         }
 
-        const userCoords = JSON.parse(coordsJson) as { latitude: number; longitude: number };
+        const userCoords = JSON.parse(coordsJson) as {
+          latitude: number;
+          longitude: number;
+        };
 
-        let donationCoords: { latitude: number; longitude: number } | null = null;
+        let donationCoords: { latitude: number; longitude: number } | null =
+          null;
 
-        if (typeof data.latitude === "number" && typeof data.longitude === "number") {
-          donationCoords = { latitude: data.latitude, longitude: data.longitude };
+        if (
+          typeof data.latitude === "number" &&
+          typeof data.longitude === "number"
+        ) {
+          donationCoords = {
+            latitude: data.latitude,
+            longitude: data.longitude,
+          };
         } else if (data.localizacao) {
           try {
             const [result] = await Location.geocodeAsync(data.localizacao);
             if (result) {
-              donationCoords = { latitude: result.latitude, longitude: result.longitude };
+              donationCoords = {
+                latitude: result.latitude,
+                longitude: result.longitude,
+              };
             }
           } catch {
             donationCoords = null;
@@ -173,7 +188,10 @@ export default function DonationDetailScreen() {
 
   const handleReivindicarPress = async () => {
     if (!user) {
-      Alert.alert("Atenção", "Você precisa estar logado para reivindicar uma doação.");
+      Alert.alert(
+        "Atenção",
+        "Você precisa estar logado para reivindicar uma doação.",
+      );
       return;
     }
     if (!donation) return;
@@ -217,8 +235,17 @@ export default function DonationDetailScreen() {
         dataAgendada,
         horarioAgendado,
       );
+      NotificationService.donationAccepted(donation.tipoAlimento);
       setDonation((prev) =>
-        prev ? { ...prev, status: "indisponivel", reivindicadoPor: user.uid, dataAgendada, horarioAgendado } : prev
+        prev
+          ? {
+              ...prev,
+              status: "indisponivel",
+              reivindicadoPor: user.uid,
+              dataAgendada,
+              horarioAgendado,
+            }
+          : prev,
       );
       Alert.alert("Sucesso!", "Doação reivindicada com sucesso.", [
         { text: "OK", onPress: () => router.back() },
@@ -239,14 +266,22 @@ export default function DonationDetailScreen() {
   const canClaim = donation?.status === "disponivel" && !isOwnDonation;
   const isClaimed = donation?.status === "indisponivel";
   const tipoRetiradaLabel =
-    donation?.tipoRetirada === "doador" ? "Entrega pelo doador" : "Retirada pelo receptor";
-  const tipoRetiradaIcon = donation?.tipoRetirada === "doador" ? "truck" : "walking";
-  const isScheduleValid = dataAgendada.length === 10 && horarioAgendado.length === 5;
+    donation?.tipoRetirada === "doador"
+      ? "Entrega pelo doador"
+      : "Retirada pelo receptor";
+  const tipoRetiradaIcon =
+    donation?.tipoRetirada === "doador" ? "truck" : "walking";
+  const isScheduleValid =
+    dataAgendada.length === 10 && horarioAgendado.length === 5;
 
   return (
     <SafeAreaView className="flex-1 bg-[#09090B]">
       <HStack className="flex-row items-center px-5 pt-2 pb-3">
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12} className="mr-3">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={12}
+          className="mr-3"
+        >
           <FontAwesome5 name="arrow-left" size={18} color="#A1A1AA" />
         </TouchableOpacity>
         <Text className="text-white text-lg font-bold flex-1" numberOfLines={1}>
@@ -256,8 +291,12 @@ export default function DonationDetailScreen() {
 
       {!donation ? (
         <Box className="flex-1 items-center justify-center px-8">
-          <Text className="text-white text-lg font-semibold mb-2">Doação não encontrada</Text>
-          <Text className="text-[#71717A] text-center">Esta doação pode ter sido removida.</Text>
+          <Text className="text-white text-lg font-semibold mb-2">
+            Doação não encontrada
+          </Text>
+          <Text className="text-[#71717A] text-center">
+            Esta doação pode ter sido removida.
+          </Text>
         </Box>
       ) : (
         <KeyboardAvoidingView
@@ -273,33 +312,62 @@ export default function DonationDetailScreen() {
           >
             <Image
               source={firstPhoto ? { uri: firstPhoto } : fallbackImage}
-              style={{ width: "100%", height: 220, borderRadius: 20, marginBottom: 16 }}
+              style={{
+                width: "100%",
+                height: 220,
+                borderRadius: 20,
+                marginBottom: 16,
+              }}
               resizeMode="cover"
             />
 
             <HStack className="flex-row flex-wrap mb-4" style={{ gap: 8 }}>
               <Box className="bg-[#1E3A0A] rounded-full px-3 py-1">
-                <Text className="text-[#84CC16] text-xs font-semibold">{donation.categoria}</Text>
+                <Text className="text-[#84CC16] text-xs font-semibold">
+                  {donation.categoria}
+                </Text>
               </Box>
               {donation.perecivel && (
                 <Box
                   className="border rounded-full px-3 py-1"
-                  style={{ backgroundColor: "rgba(127,29,29,0.2)", borderColor: "rgba(127,29,29,0.4)" }}
+                  style={{
+                    backgroundColor: "rgba(127,29,29,0.2)",
+                    borderColor: "rgba(127,29,29,0.4)",
+                  }}
                 >
-                  <Text className="text-red-400 text-xs font-semibold">Perecível</Text>
+                  <Text className="text-red-400 text-xs font-semibold">
+                    Perecível
+                  </Text>
                 </Box>
               )}
-              <Box className="bg-[#27272A] rounded-full px-3 py-1 flex-row items-center" style={{ gap: 5 }}>
-                <FontAwesome5 name={tipoRetiradaIcon} size={10} color="#A1A1AA" />
-                <Text className="text-[#A1A1AA] text-xs">{tipoRetiradaLabel}</Text>
+              <Box
+                className="bg-[#27272A] rounded-full px-3 py-1 flex-row items-center"
+                style={{ gap: 5 }}
+              >
+                <FontAwesome5
+                  name={tipoRetiradaIcon}
+                  size={10}
+                  color="#A1A1AA"
+                />
+                <Text className="text-[#A1A1AA] text-xs">
+                  {tipoRetiradaLabel}
+                </Text>
               </Box>
             </HStack>
 
             <Box className="bg-[#141416] rounded-2xl p-4 mb-3">
               <HStack style={{ gap: 16 }}>
-                <InfoCell icon="weight" label="Quantidade" value={donation.quantidade} />
+                <InfoCell
+                  icon="weight"
+                  label="Quantidade"
+                  value={donation.quantidade}
+                />
                 <Box className="w-px bg-[#27272A]" />
-                <InfoCell icon="calendar-alt" label="Validade" value={donation.validade} />
+                <InfoCell
+                  icon="calendar-alt"
+                  label="Validade"
+                  value={donation.validade}
+                />
               </HStack>
             </Box>
 
@@ -322,7 +390,9 @@ export default function DonationDetailScreen() {
             <Box className="bg-[#141416] rounded-2xl px-4 py-3 mb-4">
               <HStack className="flex-row items-center" style={{ gap: 10 }}>
                 <FontAwesome5 name="calendar-check" size={14} color="#65A30D" />
-                <Text className="text-white text-sm">{donation.dataRetirada}</Text>
+                <Text className="text-white text-sm">
+                  {donation.dataRetirada}
+                </Text>
                 <Text className="text-[#52525B]">·</Text>
                 <FontAwesome5 name="clock" size={12} color="#65A30D" />
                 <Text className="text-white text-sm">
@@ -333,15 +403,23 @@ export default function DonationDetailScreen() {
 
             {!!donation.descricao && (
               <Box className="mb-4">
-                <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">Descrição</Text>
-                <Text className="text-white text-sm leading-6">{donation.descricao}</Text>
+                <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">
+                  Descrição
+                </Text>
+                <Text className="text-white text-sm leading-6">
+                  {donation.descricao}
+                </Text>
               </Box>
             )}
 
             {!!donation.observacoes && (
               <Box className="mb-4">
-                <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">Observações</Text>
-                <Text className="text-white text-sm leading-6">{donation.observacoes}</Text>
+                <Text className="text-[#71717A] text-xs mb-1.5 uppercase tracking-widest">
+                  Observações
+                </Text>
+                <Text className="text-white text-sm leading-6">
+                  {donation.observacoes}
+                </Text>
               </Box>
             )}
 
@@ -363,7 +441,9 @@ export default function DonationDetailScreen() {
                   )}
                 </Box>
                 <VStack>
-                  <Text className="text-[#71717A] text-xs uppercase tracking-widest">Doador</Text>
+                  <Text className="text-[#71717A] text-xs uppercase tracking-widest">
+                    Doador
+                  </Text>
                   <Text className="text-white text-base font-semibold">
                     {donorProfile?.nome || "Doador"}
                   </Text>
@@ -382,7 +462,11 @@ export default function DonationDetailScreen() {
                   <Box className="flex-1">
                     <Text className="text-[#A1A1AA] text-xs mb-2">Data</Text>
                     <HStack className="items-center bg-[#27272A] rounded-xl px-3 h-12 border border-[#3F3F46]">
-                      <FontAwesome5 name="calendar-alt" size={12} color="#65A30D" />
+                      <FontAwesome5
+                        name="calendar-alt"
+                        size={12}
+                        color="#65A30D"
+                      />
                       <TextInput
                         value={dataAgendada}
                         onChangeText={(t) => setDataAgendada(formatarData(t))}
@@ -390,7 +474,12 @@ export default function DonationDetailScreen() {
                         placeholderTextColor="#52525B"
                         keyboardType="numeric"
                         maxLength={10}
-                        style={{ flex: 1, color: "white", marginLeft: 8, fontSize: 14 }}
+                        style={{
+                          flex: 1,
+                          color: "white",
+                          marginLeft: 8,
+                          fontSize: 14,
+                        }}
                       />
                     </HStack>
                   </Box>
@@ -401,25 +490,36 @@ export default function DonationDetailScreen() {
                       <FontAwesome5 name="clock" size={12} color="#65A30D" />
                       <TextInput
                         value={horarioAgendado}
-                        onChangeText={(t) => setHorarioAgendado(formatarHorario(t))}
+                        onChangeText={(t) =>
+                          setHorarioAgendado(formatarHorario(t))
+                        }
                         placeholder="HH:MM"
                         placeholderTextColor="#52525B"
                         keyboardType="numeric"
                         maxLength={5}
-                        style={{ flex: 1, color: "white", marginLeft: 8, fontSize: 14 }}
+                        style={{
+                          flex: 1,
+                          color: "white",
+                          marginLeft: 8,
+                          fontSize: 14,
+                        }}
                       />
                     </HStack>
                   </Box>
                 </HStack>
 
                 <Text className="text-[#52525B] text-xs mt-2">
-                  Disponível de {donation.horarioInicio} às {donation.horarioFim}
+                  Disponível de {donation.horarioInicio} às{" "}
+                  {donation.horarioFim}
                 </Text>
               </>
             )}
           </ScrollView>
 
-          <Box className="px-5 pt-3" style={{ paddingBottom: tabBarHeight + 12 }}>
+          <Box
+            className="px-5 pt-3"
+            style={{ paddingBottom: tabBarHeight + 12 }}
+          >
             {isOwnDonation ? (
               <Box className="bg-[#27272A] rounded-2xl h-14 items-center justify-center">
                 <Text className="text-[#71717A] text-base">Sua doação</Text>
@@ -443,18 +543,24 @@ export default function DonationDetailScreen() {
                         isScheduleValid ? "text-white" : "text-[#71717A]"
                       }`}
                     >
-                      {isScheduleValid ? "Reivindicar doação" : "Preencha data e horário"}
+                      {isScheduleValid
+                        ? "Reivindicar doação"
+                        : "Preencha data e horário"}
                     </Text>
                   )}
                 </Box>
               </TouchableOpacity>
             ) : isClaimed ? (
               <Box className="bg-[#27272A] rounded-2xl h-14 items-center justify-center">
-                <Text className="text-[#71717A] text-base">Já reivindicada</Text>
+                <Text className="text-[#71717A] text-base">
+                  Já reivindicada
+                </Text>
               </Box>
             ) : (
               <Box className="bg-[#27272A] rounded-2xl h-14 items-center justify-center">
-                <Text className="text-[#71717A] text-base">Doação indisponível</Text>
+                <Text className="text-[#71717A] text-base">
+                  Doação indisponível
+                </Text>
               </Box>
             )}
           </Box>
@@ -468,7 +574,11 @@ export default function DonationDetailScreen() {
         onRequestClose={() => setTermoModalVisible(false)}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "flex-end",
+          }}
           onPress={() => setTermoModalVisible(false)}
         >
           <Pressable
@@ -483,11 +593,19 @@ export default function DonationDetailScreen() {
             }}
             onPress={() => {}}
           >
-            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "600", marginBottom: 4 }}>
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 18,
+                fontWeight: "600",
+                marginBottom: 4,
+              }}
+            >
               Termo de aceite para doações
             </Text>
             <Text style={{ color: "#A3A3A3", fontSize: 13, marginBottom: 16 }}>
-              Leia antes de solicitar uma doação. Este aceite é válido para todas as solicitações futuras.
+              Leia antes de solicitar uma doação. Este aceite é válido para
+              todas as solicitações futuras.
             </Text>
 
             <ScrollView
@@ -507,7 +625,9 @@ export default function DonationDetailScreen() {
 
             <HStack className="flex-row items-center justify-between mb-5">
               <VStack style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "500" }}>
+                <Text
+                  style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "500" }}
+                >
                   Li e concordo com os termos
                 </Text>
                 <Text style={{ color: "#A3A3A3", fontSize: 12, marginTop: 2 }}>
@@ -535,14 +655,24 @@ export default function DonationDetailScreen() {
                 marginBottom: 12,
               }}
             >
-              <Text style={{ color: termoAceito ? "#081106" : "#A3A3A3", fontSize: 16, fontWeight: "600" }}>
+              <Text
+                style={{
+                  color: termoAceito ? "#081106" : "#A3A3A3",
+                  fontSize: 16,
+                  fontWeight: "600",
+                }}
+              >
                 Confirmar e solicitar
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => setTermoModalVisible(false)}
-              style={{ height: 44, alignItems: "center", justifyContent: "center" }}
+              style={{
+                height: 44,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <Text style={{ color: "#A3A3A3", fontSize: 15 }}>Cancelar</Text>
             </Pressable>

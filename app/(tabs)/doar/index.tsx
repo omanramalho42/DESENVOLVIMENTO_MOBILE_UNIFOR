@@ -5,6 +5,7 @@ import {
   salvarDoacao,
   verificarSeUsuarioEhDoador,
 } from "@/services";
+import { NotificationService } from "@/services/_notifications.service";
 import { useLoading } from "@/store";
 import { DonationPhotoInput } from "@/types";
 import { dataValida, formatarData, formatarHorario } from "@/utils";
@@ -116,22 +117,42 @@ const parseMarkdown = (markdownText: string): MarkdownBlock[] => {
   const blocks: MarkdownBlock[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) { blocks.push({ type: "spacer" }); continue; }
+    if (!trimmed) {
+      blocks.push({ type: "spacer" });
+      continue;
+    }
     const h = /^(#{1,3})\s+(.*)$/.exec(trimmed);
-    if (h) { blocks.push({ type: "heading", level: h[1].length as 1 | 2 | 3, text: h[2] }); continue; }
+    if (h) {
+      blocks.push({
+        type: "heading",
+        level: h[1].length as 1 | 2 | 3,
+        text: h[2],
+      });
+      continue;
+    }
     const b = /^[-*+]\s+(.*)$/.exec(trimmed);
-    if (b) { blocks.push({ type: "bullet", text: b[1] }); continue; }
+    if (b) {
+      blocks.push({ type: "bullet", text: b[1] });
+      continue;
+    }
     blocks.push({ type: "paragraph", text: trimmed });
   }
   return blocks;
 };
 
 const renderInline = (text: string) =>
-  text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <Text key={i} style={{ fontWeight: "bold", color: "#FFFFFF" }}>{part.slice(2, -2)}</Text>
-      : <Text key={i}>{part}</Text>
-  );
+  text
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <Text key={i} style={{ fontWeight: "bold", color: "#FFFFFF" }}>
+          {part.slice(2, -2)}
+        </Text>
+      ) : (
+        <Text key={i}>{part}</Text>
+      ),
+    );
 
 export default function DoarScreen() {
   const { user } = useAuth();
@@ -195,15 +216,21 @@ export default function DoarScreen() {
     if (!quantidade.trim()) return "Informe a quantidade.";
     if (!tipoAlimento.trim()) return "Informe o tipo do alimento.";
     if (!validade.trim()) return "Informe a validade.";
-    if (validade.length !== 10) return "Informe a validade no formato DD/MM/AAAA.";
-    if (!dataValida(validade)) return "Informe uma validade real e que não esteja vencida.";
+    if (validade.length !== 10)
+      return "Informe a validade no formato DD/MM/AAAA.";
+    if (!dataValida(validade))
+      return "Informe uma validade real e que não esteja vencida.";
     if (!dataRetirada.trim()) return "Informe a data disponível para retirada.";
-    if (dataRetirada.length !== 10) return "Informe a data de retirada no formato DD/MM/AAAA.";
-    if (!dataValida(dataRetirada)) return "Informe uma data de retirada real e que não esteja vencida.";
+    if (dataRetirada.length !== 10)
+      return "Informe a data de retirada no formato DD/MM/AAAA.";
+    if (!dataValida(dataRetirada))
+      return "Informe uma data de retirada real e que não esteja vencida.";
     if (!horarioInicio.trim()) return "Informe o horário inicial.";
-    if (horarioInicio.length !== 5) return "Informe o horário inicial no formato HH:MM.";
+    if (horarioInicio.length !== 5)
+      return "Informe o horário inicial no formato HH:MM.";
     if (!horarioFim.trim()) return "Informe o horário final.";
-    if (horarioFim.length !== 5) return "Informe o horário final no formato HH:MM.";
+    if (horarioFim.length !== 5)
+      return "Informe o horário final no formato HH:MM.";
     if (!endereco.trim()) return "Informe o endereço de retirada.";
     if (!aceitouTermos) return "Aceite os termos e condições para continuar.";
     return null;
@@ -248,6 +275,7 @@ export default function DoarScreen() {
         horarioFim,
         endereco,
       });
+      NotificationService.newDonation(user?.email || "user", user?.uid || "");
       limparFormulario();
       Alert.alert("Sucesso", "Doação cadastrada com sucesso!");
     } catch (error) {
@@ -266,7 +294,11 @@ export default function DoarScreen() {
   if (!ehDoador) {
     return (
       <SafeAreaView className="flex-1 bg-[#0B0F0C] items-center justify-center px-6">
-        <MaterialCommunityIcons name="shield-lock-outline" size={70} color="#65C90F" />
+        <MaterialCommunityIcons
+          name="shield-lock-outline"
+          size={70}
+          color="#65C90F"
+        />
         <Text className="text-white text-2xl font-bold mt-6 text-center">
           Área exclusiva para doadores
         </Text>
@@ -300,27 +332,45 @@ export default function DoarScreen() {
           <View className="px-5 pt-5">
             <View className="flex-row items-center justify-between mb-5">
               <View>
-                <Text className="text-white text-3xl font-bold">Cadastrar doação</Text>
+                <Text className="text-white text-3xl font-bold">
+                  Cadastrar doação
+                </Text>
                 <Text className="text-[#A3A3A3] text-[14px] mt-1">
                   Preencha as informações sobre o alimento.
                 </Text>
               </View>
               <View className="flex-row items-center">
-                <MaterialCommunityIcons name="shield-check-outline" size={18} color={GREEN} />
-                <Text className="text-[#A3A3A3] text-[13px] ml-1">Ambiente seguro</Text>
+                <MaterialCommunityIcons
+                  name="shield-check-outline"
+                  size={18}
+                  color={GREEN}
+                />
+                <Text className="text-[#A3A3A3] text-[13px] ml-1">
+                  Ambiente seguro
+                </Text>
               </View>
             </View>
 
-            <Section title="Fotos do alimento" subtitle="Adicione fotos reais do alimento">
+            <Section
+              title="Fotos do alimento"
+              subtitle="Adicione fotos reais do alimento"
+            >
               <View className="flex-row gap-3">
                 {fotos.map((foto, index) => (
                   <View key={`${foto.uri}-${index}`} className="relative">
-                    <Image source={{ uri: foto.uri }} className="w-[92px] h-[92px] rounded-2xl" />
+                    <Image
+                      source={{ uri: foto.uri }}
+                      className="w-[92px] h-[92px] rounded-2xl"
+                    />
                     <TouchableOpacity
                       onPress={() => removerFoto(index)}
                       className="absolute -top-2 -right-2 bg-[#1F2937] w-7 h-7 rounded-full items-center justify-center"
                     >
-                      <MaterialCommunityIcons name="close" size={18} color="#FFFFFF" />
+                      <MaterialCommunityIcons
+                        name="close"
+                        size={18}
+                        color="#FFFFFF"
+                      />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -329,8 +379,14 @@ export default function DoarScreen() {
                     onPress={adicionarFoto}
                     className="w-[92px] h-[92px] rounded-2xl border border-dashed border-[#365a25] items-center justify-center bg-[#101810]"
                   >
-                    <MaterialCommunityIcons name="camera-outline" size={28} color={GREEN} />
-                    <Text className="text-[#A3A3A3] text-[12px] mt-2">Adicionar foto</Text>
+                    <MaterialCommunityIcons
+                      name="camera-outline"
+                      size={28}
+                      color={GREEN}
+                    />
+                    <Text className="text-[#A3A3A3] text-[12px] mt-2">
+                      Adicionar foto
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -421,7 +477,9 @@ export default function DoarScreen() {
                 <Campo
                   label="De"
                   value={horarioInicio}
-                  onChangeText={(text) => setHorarioInicio(formatarHorario(text))}
+                  onChangeText={(text) =>
+                    setHorarioInicio(formatarHorario(text))
+                  }
                   placeholder="18:00"
                   icon="clock-outline"
                   keyboardType="numeric"
@@ -456,55 +514,185 @@ export default function DoarScreen() {
                 transparent
                 onRequestClose={() => setModalTermosVisivel(false)}
               >
-                <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "flex-end" }}>
-                  <View style={{ backgroundColor: "#0F1512", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, height: "88%" }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "bold" }}>Termos de uso</Text>
-                      <TouchableOpacity onPress={() => setModalTermosVisivel(false)}>
-                        <MaterialCommunityIcons name="close" size={24} color="#A3A3A3" />
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: "rgba(0,0,0,0.75)",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: "#0F1512",
+                      borderTopLeftRadius: 24,
+                      borderTopRightRadius: 24,
+                      padding: 24,
+                      height: "88%",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 20,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Termos de uso
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setModalTermosVisivel(false)}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={24}
+                          color="#A3A3A3"
+                        />
                       </TouchableOpacity>
                     </View>
 
-                    <View style={{ flex: 1, backgroundColor: "#0A0A0A", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#1F2937" }}>
-                      <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#1F2A18", backgroundColor: "#071007", flexDirection: "row", justifyContent: "space-between" }}>
-                        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>Documento</Text>
-                        <Text style={{ color: "#A1A1AA", fontSize: 12 }}>role para ler tudo</Text>
+                    <View
+                      style={{
+                        flex: 1,
+                        backgroundColor: "#0A0A0A",
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: "#1F2937",
+                      }}
+                    >
+                      <View
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#1F2A18",
+                          backgroundColor: "#071007",
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 14,
+                            fontWeight: "600",
+                          }}
+                        >
+                          Documento
+                        </Text>
+                        <Text style={{ color: "#A1A1AA", fontSize: 12 }}>
+                          role para ler tudo
+                        </Text>
                       </View>
 
                       <ScrollView
                         contentContainerStyle={{ padding: 16 }}
                         showsVerticalScrollIndicator={false}
                       >
-                        {parseMarkdown(MOCK_TERMS_MARKDOWN).map((block, index) => {
-                          if (block.type === "spacer") return <View key={index} style={{ height: 12 }} />;
-                          if (block.type === "heading") {
-                            const sizes: Record<1 | 2 | 3, number> = { 1: 20, 2: 17, 3: 15 };
+                        {parseMarkdown(MOCK_TERMS_MARKDOWN).map(
+                          (block, index) => {
+                            if (block.type === "spacer")
+                              return (
+                                <View key={index} style={{ height: 12 }} />
+                              );
+                            if (block.type === "heading") {
+                              const sizes: Record<1 | 2 | 3, number> = {
+                                1: 20,
+                                2: 17,
+                                3: 15,
+                              };
+                              return (
+                                <Text
+                                  key={index}
+                                  style={{
+                                    color: "#65C90F",
+                                    fontSize: sizes[block.level],
+                                    fontWeight: "bold",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  {block.text}
+                                </Text>
+                              );
+                            }
+                            if (block.type === "bullet")
+                              return (
+                                <View
+                                  key={index}
+                                  style={{
+                                    flexDirection: "row",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: "#65C90F",
+                                      marginRight: 8,
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    •
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      flex: 1,
+                                      color: "#E5E7EB",
+                                      fontSize: 14,
+                                      lineHeight: 22,
+                                    }}
+                                  >
+                                    {renderInline(block.text)}
+                                  </Text>
+                                </View>
+                              );
                             return (
-                              <Text key={index} style={{ color: "#65C90F", fontSize: sizes[block.level], fontWeight: "bold", marginBottom: 4 }}>
-                                {block.text}
+                              <Text
+                                key={index}
+                                style={{
+                                  color: "#E5E7EB",
+                                  fontSize: 14,
+                                  lineHeight: 22,
+                                  marginBottom: 8,
+                                }}
+                              >
+                                {renderInline(block.text)}
                               </Text>
                             );
-                          }
-                          if (block.type === "bullet") return (
-                            <View key={index} style={{ flexDirection: "row", marginBottom: 6 }}>
-                              <Text style={{ color: "#65C90F", marginRight: 8, fontWeight: "bold" }}>•</Text>
-                              <Text style={{ flex: 1, color: "#E5E7EB", fontSize: 14, lineHeight: 22 }}>{renderInline(block.text)}</Text>
-                            </View>
-                          );
-                          return (
-                            <Text key={index} style={{ color: "#E5E7EB", fontSize: 14, lineHeight: 22, marginBottom: 8 }}>
-                              {renderInline(block.text)}
-                            </Text>
-                          );
-                        })}
+                          },
+                        )}
                       </ScrollView>
                     </View>
 
                     <TouchableOpacity
-                      onPress={() => { setAceitouTermos(true); setModalTermosVisivel(false); }}
-                      style={{ backgroundColor: "#65C90F", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 16 }}
+                      onPress={() => {
+                        setAceitouTermos(true);
+                        setModalTermosVisivel(false);
+                      }}
+                      style={{
+                        backgroundColor: "#65C90F",
+                        borderRadius: 16,
+                        paddingVertical: 16,
+                        alignItems: "center",
+                        marginTop: 16,
+                      }}
                     >
-                      <Text style={{ color: "#081106", fontWeight: "bold", fontSize: 16 }}>Li e aceito os termos</Text>
+                      <Text
+                        style={{
+                          color: "#081106",
+                          fontWeight: "bold",
+                          fontSize: 16,
+                        }}
+                      >
+                        Li e aceito os termos
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -516,20 +704,33 @@ export default function DoarScreen() {
                 className="flex-row items-center justify-between bg-[#111827] border border-[#1F2937] rounded-2xl px-4 py-4"
               >
                 <View className="flex-row items-center flex-1">
-                  <View className={`w-7 h-7 rounded-lg items-center justify-center mr-3 ${aceitouTermos ? "bg-[#65C90F]" : "bg-[#0B0F0C]"}`}>
+                  <View
+                    className={`w-7 h-7 rounded-lg items-center justify-center mr-3 ${aceitouTermos ? "bg-[#65C90F]" : "bg-[#0B0F0C]"}`}
+                  >
                     {aceitouTermos && (
-                      <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
+                      <MaterialCommunityIcons
+                        name="check"
+                        size={20}
+                        color="#FFFFFF"
+                      />
                     )}
                   </View>
                   <Text className="text-[#D4D4D4] flex-1">
                     Aceito os{" "}
-                    <Text className="text-[#65C90F] font-semibold" onPress={() => setModalTermosVisivel(true)}>
+                    <Text
+                      className="text-[#65C90F] font-semibold"
+                      onPress={() => setModalTermosVisivel(true)}
+                    >
                       termos e condições
                     </Text>{" "}
                     da plataforma
                   </Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#A3A3A3" />
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={24}
+                  color="#A3A3A3"
+                />
               </TouchableOpacity>
             </Section>
 
@@ -551,14 +752,20 @@ export default function DoarScreen() {
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={{ color: "#081106", fontSize: 20, fontWeight: "bold" }}>
+                <Text
+                  style={{ color: "#081106", fontSize: 20, fontWeight: "bold" }}
+                >
                   Cadastrar doação
                 </Text>
               )}
             </Pressable>
 
             <View className="flex-row justify-center items-center mt-4">
-              <MaterialCommunityIcons name="lock-outline" size={16} color={GREEN} />
+              <MaterialCommunityIcons
+                name="lock-outline"
+                size={16}
+                color={GREEN}
+              />
               <Text className="text-[#A3A3A3] text-[13px] ml-2">
                 Seus dados estão protegidos com segurança
               </Text>
@@ -622,7 +829,15 @@ function Campo({
       </Text>
       <View className="flex-row bg-[#111827] border border-[#1F2937] rounded-2xl px-4">
         {icon && (
-          <View className="mr-3" style={{ height: 56, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" }}>
+          <View
+            className="mr-3"
+            style={{
+              height: 56,
+              alignItems: "center",
+              justifyContent: "center",
+              alignSelf: "flex-start",
+            }}
+          >
             <MaterialCommunityIcons name={icon} size={20} color="#65C90F" />
           </View>
         )}
@@ -637,13 +852,19 @@ function Campo({
           maxLength={maxLength}
           className="flex-1 text-white text-[15px]"
           style={[
-            { minHeight: multiline ? 96 : 56, paddingTop: multiline ? 14 : 0, paddingBottom: multiline ? 14 : 0 },
+            {
+              minHeight: multiline ? 96 : 56,
+              paddingTop: multiline ? 14 : 0,
+              paddingBottom: multiline ? 14 : 0,
+            },
             Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : null,
           ]}
         />
         {maxLength && value.length > 0 && (
           <View className="justify-center ml-2">
-            <Text className="text-[#A3A3A3] text-[12px]">{value.length}/{maxLength}</Text>
+            <Text className="text-[#A3A3A3] text-[12px]">
+              {value.length}/{maxLength}
+            </Text>
           </View>
         )}
       </View>
@@ -677,14 +898,21 @@ function SelectBox({
       >
         <MaterialCommunityIcons name={icon} size={20} color="#65C90F" />
         <Text className="text-white text-[15px] ml-3 flex-1">{value}</Text>
-        <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={24} color="#A3A3A3" />
+        <MaterialCommunityIcons
+          name={open ? "chevron-up" : "chevron-down"}
+          size={24}
+          color="#A3A3A3"
+        />
       </TouchableOpacity>
       {open && (
         <View className="bg-[#111827] border border-[#1F2937] rounded-2xl mt-2 overflow-hidden">
           {options.map((option) => (
             <TouchableOpacity
               key={option}
-              onPress={() => { onChange(option); setOpen(false); }}
+              onPress={() => {
+                onChange(option);
+                setOpen(false);
+              }}
               className="px-4 py-3 border-b border-[#1F2937]"
             >
               <Text className="text-white">{option}</Text>
@@ -714,7 +942,11 @@ function OptionCard({
       onPress={onPress}
       className={`flex-1 rounded-2xl border px-3 py-4 ${active ? "bg-[#132011] border-[#65C90F]" : "bg-[#111827] border-[#1F2937]"}`}
     >
-      <MaterialCommunityIcons name={icon} size={26} color={active ? "#65C90F" : "#A3A3A3"} />
+      <MaterialCommunityIcons
+        name={icon}
+        size={26}
+        color={active ? "#65C90F" : "#A3A3A3"}
+      />
       <Text className="text-white font-bold mt-2 text-[14px]">{title}</Text>
       <Text className="text-[#A3A3A3] text-[12px] mt-1">{subtitle}</Text>
     </TouchableOpacity>
