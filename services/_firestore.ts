@@ -13,6 +13,7 @@ import {
   SalvarDoacaoParams,
   UserProfile,
 } from "@/types";
+import * as Location from "expo-location";
 import {
   addDoc,
   collection,
@@ -24,8 +25,8 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  where,
 } from "firebase/firestore";
-import * as Location from "expo-location";
 
 export class FirestoreServiceError extends Error {
   constructor(message: string) {
@@ -301,5 +302,58 @@ export const buscarPerfilUsuario = async (
     };
   } catch {
     return null;
+  }
+};
+
+const parseKg = (quantidade: string): number => {
+  const normalized = quantidade.toLowerCase().replace(",", ".");
+  const kgMatch = normalized.match(/([\d.]+)\s*kg/);
+  if (kgMatch) return parseFloat(kgMatch[1]);
+  const gMatch = normalized.match(/([\d.]+)\s*g/);
+  if (gMatch) return parseFloat(gMatch[1]) / 1000;
+  return 0;
+};
+
+export type ImpactoUsuario = {
+  doacoes: number;
+  totalKg: number;
+  pessoasAjudadas: number;
+};
+
+export const buscarImpactoUsuario = async (
+  userId: string
+): Promise<ImpactoUsuario> => {
+  if (!db) {
+    return { doacoes: 0, totalKg: 0, pessoasAjudadas: 0 };
+  }
+
+  try {
+    const q = query(
+      collection(db, "solicitacoes"),
+      where("solicitanteId", "==", userId),
+      where("status", "==", "aprovada")
+    );
+    const snapshot = await getDocs(q);
+
+    const doacoes = snapshot.docs.length;
+
+    const quantidades = await Promise.all(
+      snapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data() as { doacaoId?: string };
+        if (!data.doacaoId) return 0;
+        const doacaoSnap = await getDoc(doc(db!, "donations", data.doacaoId));
+        if (!doacaoSnap.exists()) return 0;
+        const doacao = doacaoSnap.data() as DonationDocument;
+        return parseKg(doacao.quantidade);
+      })
+    );
+
+    const totalKg = quantidades.reduce((acc, kg) => acc + kg, 0);
+    const pessoasAjudadas = Math.floor(totalKg / 2);
+
+    return { doacoes, totalKg, pessoasAjudadas };
+  } catch (error) {
+    console.error("Erro ao buscar impacto:", error);
+    return { doacoes: 0, totalKg: 0, pessoasAjudadas: 0 };
   }
 };

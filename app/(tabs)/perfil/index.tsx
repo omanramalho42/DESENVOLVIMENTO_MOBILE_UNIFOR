@@ -1,6 +1,6 @@
-import { absoluteFill, impactMetrics, menuItems } from "@/constants";
+import { absoluteFill, menuItems } from "@/constants";
 import useAuth from "@/hooks/_useAuth";
-import { auth, db, storage } from "@/services";
+import { auth, buscarImpactoUsuario, db, ImpactoUsuario, storage } from "@/services";
 import { useLoading } from "@/store";
 import { UserProfile } from "@/types";
 import Feather from "@expo/vector-icons/Feather";
@@ -86,6 +86,7 @@ const ProfileScreen = () => {
   const [phoneSaving, setPhoneSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [impacto, setImpacto] = useState<ImpactoUsuario>({ doacoes: 0, totalKg: 0, pessoasAjudadas: 0 });
 
   const displayProfile = useMemo(() => {
     if (!profile) {
@@ -149,6 +150,7 @@ const ProfileScreen = () => {
         fotoPerfil: data.fotoPerfil?.trim() || "",
         tipoUsuario: data.tipoUsuario?.trim() || fallback.tipoUsuario,
       });
+      buscarImpactoUsuario(user.uid).then(setImpacto).catch(() => {});
     } catch (loadError) {
       const errorCode = getFirebaseErrorCode(loadError);
       const fallback = buildFallbackProfile(user.displayName, user.email);
@@ -554,7 +556,11 @@ const ProfileScreen = () => {
               </Text>
 
               <View className="mt-5 flex-row items-stretch px-1">
-                {impactMetrics.map((item, index) => (
+                {[
+                { icon: "gift-outline" as const, value: String(impacto.doacoes), label: "doações feitas" },
+                { icon: "leaf" as const, value: `${impacto.totalKg % 1 === 0 ? impacto.totalKg : impacto.totalKg.toFixed(1)} kg`, label: "alimentos doados" },
+                { icon: "account-group-outline" as const, value: String(impacto.pessoasAjudadas), label: "pessoas ajudadas" },
+              ].map((item, index, arr) => (
                   <View key={item.label} className="flex-1 items-center px-1">
                     <View className="mb-3 h-[48px] w-[48px] items-center justify-center rounded-full border border-[#2B5718] bg-[#19340E]">
                       <MaterialCommunityIcons name={item.icon} size={22} color="#65C90F" />
@@ -563,7 +569,7 @@ const ProfileScreen = () => {
                     <Text className="mt-[2px] max-w-[80px] text-center text-[12px] leading-[15px] text-[#A3A3A3]">
                       {item.label}
                     </Text>
-                    {index < impactMetrics.length - 1 ? (
+                    {index < arr.length - 1 ? (
                       <View className="absolute right-0 top-2 bottom-2 w-[1px] bg-white/10" />
                     ) : null}
                   </View>
