@@ -1,9 +1,6 @@
 import type { ImagePickerAsset } from "expo-image-picker";
 
-export type DonationStatus =
-  | "disponivel"
-  | "indisponivel"
-  | "cancelada";
+export type DonationStatus = "disponivel" | "indisponivel" | "cancelada";
 
 export type RequestStatus =
   | "pendente"
@@ -61,6 +58,31 @@ export type CloudinaryImageAsset = {
 export type CloudinaryImageUploadResult = CloudinaryImageAsset & {
   deleteToken?: string | null;
 };
+
+export enum NotificationType {
+  NEW_DONATION = "NEW_DONATION",
+  DONATION_ACCEPTED = "DONATION_ACCEPTED",
+  DONATION_RECEIVED = "DONATION_RECEIVED",
+  DONATION_CANCELLED = "DONATION_CANCELLED",
+  SYSTEM = "SYSTEM",
+}
+
+export interface NotificationItem {
+  id: string;
+
+  title: string;
+  description: string;
+
+  type: NotificationType;
+
+  isRead: boolean;
+
+  createdAt: string;
+
+  donationId?: string;
+  donorId?: string;
+  receiverId?: string;
+}
 
 export type DonationPhotoInput = Pick<
   ImagePickerAsset,

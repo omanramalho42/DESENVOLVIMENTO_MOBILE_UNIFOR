@@ -134,6 +134,12 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="notificacoes/index"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
