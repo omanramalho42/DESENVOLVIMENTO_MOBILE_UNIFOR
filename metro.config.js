@@ -12,14 +12,20 @@ config.resolver = {
   },
   resolveRequest: (context, moduleName, platform) => {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     if (moduleName === 'framer-motion' && context.customResolverOptions?.environment === 'node') {
       return { type: 'empty' };
 =======
+=======
+>>>>>>> Stashed changes
     if (moduleName === 'tslib') {
       return {
         filePath: require.resolve('tslib/tslib.js'),
         type: 'sourceFile',
       };
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     }
     return context.resolveRequest(context, moduleName, platform);
